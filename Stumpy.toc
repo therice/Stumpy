@@ -1,0 +1,22 @@
+## Interface: 20503
+## X-Min-Interface: 20503
+## Title: |cff1784d1Stumpy|r
+## Notes: Shaman Totem Toolbox for World of Warcraft (TBC Classic)
+## Author: Jackburtón-Atiesh
+## Version: @project-version@
+## SavedVariables: Stumpy_DB
+## X-AddonName: Stumpy
+## X-InterfaceName: Stumpy (TBC Classic)
+
+## Required Libraries
+Libs\Libs.xml
+## Localization
+Locales\Locales.xml
+## Core Pre-Loaded
+Core\PreLoad.xml
+## Initialization Stub
+Init.lua
+## User Interface
+UI\UI.xml
+## Core AddOn
+Core\Core.xml
