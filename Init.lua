@@ -48,6 +48,8 @@ do
     AddOn:AddLibrary('DataBroker', 'LibDataBroker-1.1')
     AddOn:AddLibrary('DbIcon', 'LibDBIcon-1.0')
     AddOn:AddLibrary('JSON', 'LibJSON-1.0')
+    AddOn:AddLibrary('SpellRange', 'SpellRange-1.0')
+    AddOn:AddLibrary('RangeCheck', 'LibRangeCheck-2.0')
 end
 
 AddOn.Locale = AddOn:GetLibrary("AceLocale"):GetLocale(AddOn.Constants.name)

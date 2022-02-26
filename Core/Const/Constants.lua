@@ -11,14 +11,18 @@ AddOn.Constants = {
     name   = name,
     name_c = "|CFF87CEFA" .. name .. "|r",
 
+    Classes = {
+        Shaman = 7
+    },
+
     -- https://www.easyrgb.com/en/convert.php
     -- https://wowpedia.fandom.com/wiki/Quality
-    Colors = {
+    Colors  = {
         AdmiralBlue    = CreateColor(0.3, 0.35, 0.5, 1),
         Aluminum       = CreateColor(0.7, 0.7, 0.7, 1),
         Blue           = CreateColor(0, 0.44, 0.87, 1),
         Cream          = CreateColor(1.0, 0.99216, 0.81569, 1),
-        Cyan           = CreateColor(0.61569,  0.85490, 0.90196, 1),
+        Cyan           = CreateColor(0.61569, 0.85490, 0.90196, 1),
         DeathKnightRed = CreateColor(0.77, 0.12, 0.23, 1),
         Evergreen      = CreateColor(0, 1, 0.59, 1),
         Fuchsia        = CreateColor(1, 0, 1, 1),
@@ -32,7 +36,7 @@ AddOn.Constants = {
         ItemPoor       = _G.ITEM_QUALITY_COLORS[0].color,
         ItemRare       = _G.ITEM_QUALITY_COLORS[3].color,
         ItemUncommon   = _G.ITEM_QUALITY_COLORS[2].color,
-        LightBlue      = CreateColor(0.62353,0.86275,0.89412, 1),
+        LightBlue      = CreateColor(0.62353, 0.86275, 0.89412, 1),
         LuminousOrange = CreateColor(1, 0, 0, 1),
         LuminousYellow = CreateColor(1, 1, 0, 1),
         MageBlue       = CreateColor(0.25, 0.78, 0.92, 1),
@@ -46,7 +50,56 @@ AddOn.Constants = {
         White          = CreateColor(1, 1, 1, 1)
     },
 
-    Events = {
+    Buttons = {
+        Left  = "LeftButton",
+        Right = "RightButton",
+    },
 
-    }
+    Direction = {
+        Horizontal = "HORIZONTAL",
+        Vertical   = "VERTICAL",
+    },
+
+    Events = {
+        PlayerEnteringWorld    = "PLAYER_ENTERING_WORLD",
+        PlayerTotemUpdate      = "PLAYER_TOTEM_UPDATE",
+        UnitSpellcastSucceeded = "UNIT_SPELLCAST_SUCCEEDED"
+    },
+
+    Messages = {
+        Enabled =   name .. "_Enabled",
+    },
+
+    Modes = {
+        Standard                =   0x01,   -- 00001
+        Test                    =   0x02,   -- 00010
+        Develop                 =   0x04,   -- 00100
+    },
+
+    Sort = {
+        Ascending   = "ASCENDING",
+        Descending  = "DESCENDING"
+    },
+
+    Talents = {
+        DualWield      = {2, 18},
+        TotemicMastery = {3, 8},
+    },
+
+    TalentSpells = {
+        DualWield      = 674,
+        TotemicMastery = 16189,
+    },
+
+    TotemElements = {
+        Fire  = 1,
+        Earth = 2,
+        Water = 3,
+        Air   = 4
+    },
+}
+
+local C = AddOn.Constants
+AddOn.Constants.ClassTags = {
+    Shaman = C_CreatureInfo.GetClassInfo(C.Classes.Shaman).classFile
 }

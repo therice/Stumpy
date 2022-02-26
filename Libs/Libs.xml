@@ -27,4 +27,6 @@
     <Script file="LibWindow-1.1\LibWindow-1.1.lua" />
     <Include file="MSA-DropDownMenu-1.0\MSA-DropDownMenu-1.0.xml" />
     <Include file="LibJSON-1.0\LibJSON-1.0.xml" />
+    <Include file="LibSpellRange-1.0\LibSpellRange-1.0.xml" />
+    <Include file="LibRangeCheck-2.0\LibRangeCheck-2.0.xml" />
 </Ui>

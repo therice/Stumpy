@@ -900,6 +900,7 @@ _G.CLASS_ICON_TCOORDS = {}
 _G.ENABLE = "Enable"
 _G.CLOSES_IN = "Time remaining"
 _G.FRIENDS_FRIENDS_CHOICE_EVERYONE = "Everyone"
+_G.MAX_TOTEMS = 4
 
 -- https://wow.gamepedia.com/API_GetItemSubClassInfo
 function GetItemSubClassInfo(classId, subClassId)

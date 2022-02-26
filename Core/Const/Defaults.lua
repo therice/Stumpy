@@ -12,6 +12,12 @@ AddOn.defaults = {
     profile = {
         logThreshold        = Logging.Level.Trace,
 
+        minimap = {
+            shown       = true,
+            locked      = false,
+            minimapPos  = 125,
+        },
+
         -- user interface element positioning and scale
         ui = {
             ['**'] = {

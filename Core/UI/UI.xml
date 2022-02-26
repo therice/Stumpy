@@ -1,7 +1,3 @@
 <Ui xmlns="http://www.blizzard.com/wow/ui/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.blizzard.com/wow/ui/..\FrameXML\UI.xsd">
-    <Script file="Util.lua"/>
-    <Script file="Event.lua"/>
-    <Script file="Events.lua"/>
-    <Script file="AddOn.lua"/>
-    <Include file="UI\UI.xml"/>
+    <Script file="Minimap.lua" />
 </Ui>
