@@ -5,6 +5,118 @@ local Logging = AddOn:GetLibrary('Logging')
 local Util =  AddOn:GetLibrary("Util")
 local pkg = AddOn.Package('UI.Native')
 
+--- @class UI.Native.FrameContainer
+local FrameContainer = pkg:Class('FrameContainer')
+--[[
+do
+    local Delegates = {'GetID', 'GetPoint', 'StartMoving', 'StopMovingOrSizing', 'Show', 'Hide'}
+    for _, delegate in pairs(Delegates) do
+        FrameContainer[delegate] =
+            function(self, ...)
+                local frame = self:GetFrame()
+                return frame[delegate](frame, ...)
+            end
+    end
+end
+
+
+local function EmbedDelegates(container)
+    Logging:Debug("%s", Util.Objects.ToString(container.frame, 10))
+    for name, value in pairs(container:GetFrame()) do
+        Logging:Debug("Evaluating %s", tostring(name))
+        if Util.Objects.IsFunction(value) then
+            Logging:Debug("Embedding %s", tostring(name))
+            container[name] =
+                function(self, ...)
+                    local frame = self:GetFrame()
+                    return frame[name](frame, ...)
+                end
+        end
+    end
+end
+
+function FrameContainer:Delegate(fn, ...)
+    local frame = self:GetFrame()
+    return frame[fn](frame, ...)
+end
+--]]
+
+function FrameContainer:initialize(fn)
+    self.frame = self:CreateFrame(fn)
+    -- short hand for referencing frame
+    self._ = self.frame
+
+    --[[
+    if self.frame then
+
+        local frame = self.frame
+        local metatable = getmetatable(self)
+        local origIndex = metatable.__index
+
+        Logging:Debug("__index : %s", type(origIndex))
+
+        metatable.__index = function(self, k, ...)
+            --Logging:Debug("__index(%s)", tostring(k))
+            --Logging:Debug("__index(%s) : %s", tostring(k), Util.Objects.ToString(origIndex))
+
+            local v = origIndex(self, k)
+
+            --Logging:Debug("__index(%s) : %s, %s", tostring(k), Util.Objects.ToString(v), Util.Objects.ToString({...}))
+
+            if Util.Objects.IsNil(v) and frame[k] then
+                Logging:Debug("__index[frame](%s)", tostring(k))
+                v = function(...) return frame[k](frame, ...) end
+            end
+
+            return v
+        end
+
+        setmetatable(self, metatable)
+    end
+
+    self._ = {}
+    setmetatable(self._, {
+        __index = function(_, k)
+            return function(_, ...)
+                return self.frame[k](self.frame, ...)
+            end
+        end
+    })
+    --]]
+end
+
+function FrameContainer:GetFrame()
+    return self.frame
+end
+
+function FrameContainer:GetFrameName()
+    return self.frame and self.frame:GetName() or nil
+end
+
+function FrameContainer:Show()
+    self:GetFrame():Show()
+end
+
+function FrameContainer:Hide()
+    self:GetFrame():Hide()
+end
+
+function FrameContainer:Toggle()
+    local frame = self:GetFrame()
+    if frame:IsVisible() then
+        self:Hide()
+    else
+        self:Show()
+    end
+end
+
+function FrameContainer:CreateFrame(fn)
+    if Util.Objects.IsNil(self.frame) and Util.Objects.IsFunction(fn) then
+        --Logging:Trace("CreateFrame(%s)", Util.Objects.ToString(fn))
+        return fn()
+    end
+end
+
 --- @class UI.Native.Widget
 local Widget = pkg:Class('Widget')
 
@@ -506,11 +618,8 @@ function Native:Popup(...)
         self:New('DecorationLine', p.content, true, "BACKGROUND")
             :Point("TOPLEFT", p, 0, -16)
             :Point("BOTTOMRIGHT", p, "TOPRIGHT", 0, -36)
-
-
     p:CreateShadow(20)
     p:ShadowInside()
-
     return p
 end
 
@@ -524,6 +633,24 @@ end
 
 function Native.ResolveTexture(texture)
     return Widget.ResolveTexture(texture)
+end
+
+function Native.SetInside(obj, anchor, xOffset, yOffset, anchor2)
+    xOffset, yOffset, anchor = xOffset or 1, yOffset or 1, anchor or obj:GetParent()
+
+    if obj:GetPoint() then obj:ClearAllPoints() end
+
+    obj:SetPoint('TOPLEFT', anchor, 'TOPLEFT', xOffset, -yOffset)
+    obj:SetPoint('BOTTOMRIGHT', anchor2 or anchor, 'BOTTOMRIGHT', -xOffset, yOffset)
+end
+
+function Native.SetOutside(obj, anchor, xOffset, yOffset, anchor2)
+    xOffset, yOffset, anchor = xOffset or 1, yOffset or 1, anchor or obj:GetParent()
+
+    if obj:GetPoint() then obj:ClearAllPoints() end
+
+    obj:SetPoint('TOPLEFT', anchor, 'TOPLEFT', -xOffset, yOffset)
+    obj:SetPoint('BOTTOMRIGHT', anchor2 or anchor, 'BOTTOMRIGHT', xOffset, -yOffset)
 end
 
 if AddOn._IsTestContext('UI_Native') then

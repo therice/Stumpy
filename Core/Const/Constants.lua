@@ -63,17 +63,40 @@ AddOn.Constants = {
     Events = {
         PlayerEnteringWorld    = "PLAYER_ENTERING_WORLD",
         PlayerTotemUpdate      = "PLAYER_TOTEM_UPDATE",
+        SpellsChanged          = "SPELLS_CHANGED",
         UnitSpellcastSucceeded = "UNIT_SPELLCAST_SUCCEEDED"
     },
 
+    Icons = {
+        TotemGeneric = 136232
+    },
+
+    Keys = {
+        RightControl = "RCTRL",
+        LeftControl = "LCTRL",
+    },
+
+    Layout = {
+        Column  = "COLUMN",
+        Grid    = "GRID",
+    },
+
+    MaxTotems = MAX_TOTEMS,
+
     Messages = {
-        Enabled =   name .. "_Enabled",
+        Enabled             = name .. "_Enabled",
+        ModeChanged         = name .. "_ModeChanged",
     },
 
     Modes = {
-        Standard                =   0x01,   -- 00001
-        Test                    =   0x02,   -- 00010
-        Develop                 =   0x04,   -- 00100
+        Standard      = 0x01, -- 1   [base10] -> 00000001
+        Test          = 0x02, -- 2   [base10] -> 00000010
+        Develop       = 0x04, -- 4   [base10] -> 00000100
+        Persistence   = 0x08, -- 8   [base10] -> 00001000
+        Reserved2     = 0x10, -- 16  [base10] -> 00010000
+        Reserved3     = 0x20, -- 32  [base10] -> 00100000
+        Reserved4     = 0x40, -- 64  [base10] -> 01000000
+        EmulateCombat = 0x80, -- 128 [base10] -> 10000000
     },
 
     Sort = {
@@ -91,6 +114,8 @@ AddOn.Constants = {
         TotemicMastery = 16189,
     },
 
+    -- https://wowpedia.fandom.com/wiki/API_GetTotemInfo
+    -- index of the totem (Fire = 1 Earth = 2 Water = 3 Air = 4)
     TotemElements = {
         Fire  = 1,
         Earth = 2,
@@ -102,4 +127,13 @@ AddOn.Constants = {
 local C = AddOn.Constants
 AddOn.Constants.ClassTags = {
     Shaman = C_CreatureInfo.GetClassInfo(C.Classes.Shaman).classFile
+}
+
+-- these are the item ids which correspond to the physical item (totem)
+-- required to cast a totem of that element
+AddOn.Constants.TotemItemIds = {
+    [C.TotemElements.Fire]  = 5176,
+    [C.TotemElements.Earth] = 5175,
+    [C.TotemElements.Water] = 5177,
+    [C.TotemElements.Air]   = 5178
 }

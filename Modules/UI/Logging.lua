@@ -44,10 +44,14 @@ function Logging:BuildFrame()
         frame.msg = msg
 
         local clear = UI:NewNamed("Button", frame.content or frame, "Clear", L['clear'])
-        --clear:SetText(L['clear'])
         clear:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -13, 5)
         clear:SetScript("OnClick", function() frame.msg:Clear() end)
         frame.clear = clear
+
+        local reloadUI = UI:NewNamed("Button", frame.content or frame, "Reload", L['reload_ui'])
+        reloadUI:SetPoint("RIGHT", clear, "LEFT", -10, 0)
+        reloadUI:SetScript("OnClick", function() ReloadUI() end)
+        frame.reloadUI = reloadUI
 
         --- @type UI.Widgets.Dropdown
         local threshold = CreateLevelDropdown(frame.content or frame)

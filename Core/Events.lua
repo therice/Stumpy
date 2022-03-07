@@ -7,9 +7,10 @@ local Logging =  AddOn:GetLibrary("Logging")
 local Util =  AddOn:GetLibrary("Util")
 --- @type Core.Event
 local Event = AddOn.Require('Core.Event')
+--- @type Models.Spell.Spells
+local Spells = AddOn.RequireOnUse('Models.Spell.Spells')
 --- @type Models.Totem.Totems
 local Totems = AddOn.RequireOnUse('Models.Totem.Totems')
-
 
 function AddOn:SubscribeToEvents()
 	Logging:Debug("SubscribeToEvents(%s)", self:GetName())
@@ -46,7 +47,14 @@ function AddOn:PlayerEnteringWorld(_, isLogin, isReload)
 		"PlayerEnteringWorld(%s) : isLogin=%s, isReload=%s, initialLoad=%s",
 		 tostring(nil), tostring(isLogin), tostring(isReload), tostring(initialLoad)
 	)
+	-- if we have not yet handled the initial entering world event
+	if initialLoad then
+		initialLoad = false
+		Totems():Initialize()
+	end
+end
 
-	AddOn.UpdateSpells()
-	Totems():Initialize()
+function AddOn:SpellsChanged()
+	Logging:Debug("SpellsChanged()")
+	Spells():Refresh()
 end

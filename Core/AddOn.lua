@@ -9,6 +9,8 @@ local Util =  AddOn:GetLibrary("Util")
 local SemanticVersion  = AddOn.Package('Models').SemanticVersion
 --- @type UI.Util
 local UIUtil = AddOn.Require('UI.Util')
+--- @type Core.SlashCommands
+local SlashCommands = AddOn.Require('Core.SlashCommands')
 
 function AddOn:OnInitialize()
 	Logging:Debug("OnInitialize(%s)", self:GetName())
@@ -17,9 +19,13 @@ function AddOn:OnInitialize()
 	-- bitfield which keeps track of our operating mode
 	--- @type Core.Mode
 	self.mode = AddOn.Package('Core').Mode()
-
+	-- add on settings
 	self.db = self:GetLibrary("AceDB"):New(self:Qualify('DB'), self.defaults)
 	if not AddOn._IsTestContext() then Logging:SetRootThreshold(self.db.profile.logThreshold) end
+
+	-- register slash commands
+	SlashCommands:Register()
+	self:RegisterChatCommands()
 end
 
 function AddOn:OnEnable()
@@ -29,7 +35,6 @@ function AddOn:OnEnable()
 	--@end-debug@
 
 	Logging:Debug("OnEnable(%s) : Mode=%s", self:GetName(), tostring(self.mode))
-
 
 	self.player = AddOn.Player()
 	Logging:Debug("%s", Util.Objects.ToString(self.player))

@@ -569,6 +569,8 @@ function CanEditOfficerNote() return true end
 
 function ChatFrame_AddMessageEventFilter(event, fn)  end
 
+function GetNumSpellTabs()  return 0 end
+
 -- dubious
 local function SenderName()
     local player, realm = UnitFullName("player")
@@ -901,6 +903,7 @@ _G.ENABLE = "Enable"
 _G.CLOSES_IN = "Time remaining"
 _G.FRIENDS_FRIENDS_CHOICE_EVERYONE = "Everyone"
 _G.MAX_TOTEMS = 4
+_G.SPELL_TOTEMS = "Tools: "
 
 -- https://wow.gamepedia.com/API_GetItemSubClassInfo
 function GetItemSubClassInfo(classId, subClassId)

@@ -58,45 +58,6 @@ function AddOn.Player()
 	return player
 end
 
--- https://wowpedia.fandom.com/wiki/API_GetNumSpellTabs
-local GetNumSpellTabs = _G.GetNumSpellTabs
--- https://wowpedia.fandom.com/wiki/API_GetSpellTabInfo
-local GetSpellTabInfo = _G.GetSpellTabInfo
--- https://wowpedia.fandom.com/wiki/API_GetSpellBookItemInfo
-local GetSpellBookItemInfo = _G.GetSpellBookItemInfo
--- https://wowpedia.fandom.com/wiki/API_GetSpellBookItemName
-local GetSpellBookItemName = _G.GetSpellBookItemName
--- https://wowpedia.fandom.com/wiki/API_GetSpellLink
-local GetSpellLink = _G.GetSpellLink
--- https://wowpedia.fandom.com/wiki/API_GetSpellInfo
-local GetSpellInfo = _G.GetSpellInfo
-local GetSpellSubtext = _G.GetSpellSubtext
-
-function AddOn.SpellLinkToSpell(link)
-	return strmatch(strmatch(link or "", "spell:[%d:-]+") or "", "(spell:.-):*$")
-end
-
-function AddOn.UpdateSpells(type)
-	type = Util.Objects.Default(type, "spell")
-
-	local spellCount = 0
-	for tab = 1, GetNumSpellTabs() do
-		local _, _, offs, numspells, _, specId = GetSpellTabInfo(tab)
-		if specId == 0 then
-			spellCount = offs + numspells
-		end
-	end
-
-	Logging:Trace("UpdateSpells() : spell count = %d", spellCount)
-
-	for index = 1, spellCount do
-		local type, id = GetSpellBookItemInfo(index, type)
-		local name, subName = GetSpellBookItemName(index, type)
-		local subText = GetSpellSubtext(id)
-		local link =  GetSpellLink(index, type)
-		Logging:Trace("UpdateSpells() : index=%d, name=%s (%s), type=%s, id=%d, subtext=%s, link=%s", index, name, subName, type, id, tostring(subText), tostring(AddOn.SpellLinkToSpell(link)))
-		Logging:Trace("UpdateSpells() : id=%d, %s", id, Util.Objects.ToString({GetSpellInfo(id)}))
-	end
-
-
+function AddOn:InCombatLockdown()
+	return InCombatLockdown() or self:CombatEmulationEnabled()
 end

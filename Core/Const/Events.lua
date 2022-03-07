@@ -3,5 +3,6 @@ local _, AddOn = ...
 local E = AddOn.Constants.Events
 
 AddOn.Events = {
-	--[E.PlayerEnteringWorld] = "PlayerEnteringWorld",
+	[E.PlayerEnteringWorld] = "PlayerEnteringWorld",
+	[E.SpellsChanged]       = "SpellsChanged",
 }

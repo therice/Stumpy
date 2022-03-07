@@ -9,14 +9,15 @@ local NativeUI = AddOn.Require('UI.Native')
 local BaseWidget = AddOn.ImportPackage('UI.Native').Widget
 local Button = AddOn.Package('UI.Widgets'):Class('Button', BaseWidget)
 
-function Button:initialize(parent, name, text)
+function Button:initialize(parent, name, text, templates)
     BaseWidget.initialize(self, parent, name)
     self.text = text or ""
+    self.templates = templates or nil
 end
 
 -- Button()
 function Button:Create()
-    local b = CreateFrame("Button", self.name, self.parent)
+    local b = CreateFrame("Button", self.name, self.parent, self.templates)
     b:SetText("")
     b:SetSize(100, 20)
 

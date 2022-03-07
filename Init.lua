@@ -50,6 +50,7 @@ do
     AddOn:AddLibrary('JSON', 'LibJSON-1.0')
     AddOn:AddLibrary('SpellRange', 'SpellRange-1.0')
     AddOn:AddLibrary('RangeCheck', 'LibRangeCheck-2.0')
+    AddOn:AddLibrary('Deformat', 'LibDeformat-3.0')
 end
 
 AddOn.Locale = AddOn:GetLibrary("AceLocale"):GetLocale(AddOn.Constants.name)
@@ -71,7 +72,7 @@ end
 
 local function SetDbValue(self, db, i, v)
     local path = Util.Objects.IsTable(i) and tostring(i[#i]) or i
-    Logging:Trace("SetDbValue(%s, %s, %s, %s)", self:GetName(), tostring(db), tostring(path), Util.Objects.ToString(v))
+    Logging:Debug("SetDbValue(%s, %s, %s, %s)", self:GetName(), tostring(db), tostring(path), Util.Objects.ToString(v))
     Util.Tables.Set(db, path, v)
     if self['GenerateConfigChangedEvents'] and self:GenerateConfigChangedEvents() then
         AddOn:ConfigChanged(self:GetName(), path)

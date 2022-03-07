@@ -1,4 +1,4 @@
-local AddOn, NativeUI, Class
+local AddOn, NativeUI, Class, Util
 
 local function CustomWidget()
     local NativeWidget = AddOn.ImportPackage('UI.Native').Widget
@@ -20,6 +20,7 @@ describe("Native UI", function()
         _, AddOn = loadfile("Test/TestSetup.lua")(true, 'UI_Native')
         NativeUI = AddOn.Require('UI.Native')
         Class = AddOn:GetLibrary('Class')
+        Util = AddOn:GetLibrary('Util')
     end)
 
     teardown(function()
@@ -62,6 +63,53 @@ describe("Native UI", function()
             assert.are.same(w.parent, { })
             -- assert(w.SetMultipleScripts and type(w.SetMultipleScripts) == 'function')
             NativeUI:UnregisterWidget('awidget')
+        end)
+    end)
+
+    describe("frame container creation", function()
+        --- @type UI.Native.FrameContainer
+        local FrameContainer = AddOn.ImportPackage('UI.Native').FrameContainer
+
+        it("delegates methods to frame", function()
+            local container = FrameContainer(function() return CreateFrame('Frame') end)
+            --
+            ----local dict = rawget(container, '__index')
+            --local metatable = getmetatable(container)
+            --print(Util.Objects.ToString(metatable, 10))
+            --
+            --local orig = metatable.__index
+            --print(Util.Objects.ToString(orig, 10))
+            --
+            --metatable.__index = function(self, k, ...)
+            --    print(tostring(self) .. '.' .. tostring(k))
+            --    print(dump(...))
+            --
+            --    if orig[k] then
+            --        return orig[k]
+            --    else
+            --        return self.frame[k]
+            --    end
+            --end
+            --
+            --setmetatable(container, metatable)
+
+            --container.__call = function(...)
+            --    print(Util.Objects.ToString(...))
+            --end
+
+            --print(Util.Objects.ToString(container._))
+            container._:GetID()
+            container._:SetID(-99)
+            print(container._:GetID())
+
+            --FrameContainer.__index = function(...) print(Util.Objects.ToString({...})) end
+
+            --print(Util.Objects.ToString(container.clazz.__index, 10))
+            container:GetFrame()
+            --container:GetFrameName()
+            --container:SetID(-99)
+            --print(container:GetID())
+            --print(container:GetPoint())
         end)
     end)
 end)
