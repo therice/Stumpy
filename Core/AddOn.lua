@@ -37,7 +37,8 @@ function AddOn:OnEnable()
 	Logging:Debug("OnEnable(%s) : Mode=%s", self:GetName(), tostring(self.mode))
 
 	self.player = AddOn.Player()
-	Logging:Debug("%s", Util.Objects.ToString(self.player))
+	Logging:Debug("%s", Util.Objects.ToString(self.player:toTable()))
+	--[[
 	if not self.player:IsShaman() then
 		AddOn:Print(
 			format(
@@ -47,10 +48,8 @@ function AddOn:OnEnable()
 		)
 		self:Disable()
 		return
-	else
-		Logging:Debug("%s", Util.Objects.ToString({GetTalentInfo(3,8)}))
 	end
-
+	--]]
 
 	for name, module in self:IterateModules() do
 		Logging:Debug("OnEnable(%s) : Examining module (startup) '%s'", self:GetName(), name)
@@ -72,7 +71,6 @@ end
 
 function AddOn:OnDisable()
 	Logging:Debug("OnDisable(%s)", self:GetName())
-
 	for _, module in self:IterateModules() do
 		module:Disable()
 	end

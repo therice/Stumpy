@@ -24,7 +24,7 @@ do
     AddOn:AddLibrary('CallbackHandler', 'CallbackHandler-1.0')
     AddOn:AddLibrary('Class', 'LibClass-1.0')
     AddOn:AddLibrary('Logging', 'LibLogging-1.1')
-    AddOn:AddLibrary('Util', 'LibUtil-1.1')
+    AddOn:AddLibrary('Util', 'LibUtil-1.2')
     AddOn:AddLibrary('Deflate', 'LibDeflate')
     AddOn:AddLibrary('Base64', 'LibBase64-1.0')
     AddOn:AddLibrary('Rx', 'LibRx-1.1')
@@ -48,9 +48,10 @@ do
     AddOn:AddLibrary('DataBroker', 'LibDataBroker-1.1')
     AddOn:AddLibrary('DbIcon', 'LibDBIcon-1.0')
     AddOn:AddLibrary('JSON', 'LibJSON-1.0')
-    AddOn:AddLibrary('SpellRange', 'SpellRange-1.0')
+    AddOn:AddLibrary('HereBeDragons', 'HereBeDragons-2.0')
     AddOn:AddLibrary('RangeCheck', 'LibRangeCheck-2.0')
     AddOn:AddLibrary('Deformat', 'LibDeformat-3.0')
+    AddOn:AddLibrary('Totem', 'LibTotem-1.0')
 end
 
 AddOn.Locale = AddOn:GetLibrary("AceLocale"):GetLocale(AddOn.Constants.name)

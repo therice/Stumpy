@@ -3,6 +3,7 @@
     <Script file="SlashCommands.lua"/>
     <Script file="Event.lua"/>
     <Script file="Events.lua"/>
+    <Script file="Message.lua"/>
     <Script file="Core.lua"/>
     <Script file="AddOn.lua"/>
     <Include file="UI\UI.xml"/>

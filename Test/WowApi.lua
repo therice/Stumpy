@@ -487,7 +487,9 @@ function GetNumRaidMembers() return _G.MAX_RAID_MEMBERS  end
 
 function GetMasterLootCandidate(slot, i) return "Player" ..  i end
 
-function GetNumPartyMembers() return 5 end
+function GetNumPartyMembers() return 4 end
+
+function GetNumSubgroupMembers()  return 4 end
 
 function GetNumGroupMembers() return 25 end
 

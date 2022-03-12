@@ -6,7 +6,7 @@
     <Include file="LibSHA-1.0\LibSHA-1.0.xml"/>
     <Include file="LibClass-1.0\LibClass-1.0.xml"/>
     <Include file="LibLogging-1.1\LibLogging-1.1.xml"/>
-    <Include file="LibUtil-1.1\LibUtil-1.1.xml"/>
+    <Include file="LibUtil-1.2\LibUtil-1.2.xml"/>
     <Include file="LibRx-1.1\LibRx-1.1.xml"/>
     <Include file="LibMessagePack-1.0\LibMessagePack-1.0.xml"/>
     <Include file="LibDeformat-3.0\LibDeformat-3.0.xml"/>
@@ -28,6 +28,7 @@
     <Script file="LibWindow-1.1\LibWindow-1.1.lua" />
     <Include file="MSA-DropDownMenu-1.0\MSA-DropDownMenu-1.0.xml" />
     <Include file="LibJSON-1.0\LibJSON-1.0.xml" />
-    <Include file="LibSpellRange-1.0\LibSpellRange-1.0.xml" />
+    <Include file="HereBeDragons-2.0\HereBeDragons-2.0.xml" />
     <Include file="LibRangeCheck-2.0\LibRangeCheck-2.0.xml" />
+    <Include file="LibTotem-1.0\LibTotem-1.0.xml" />
 </Ui>

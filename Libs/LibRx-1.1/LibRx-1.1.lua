@@ -5,7 +5,7 @@ local MINOR_VERSION = 20502
 local Lib = LibStub:NewLibrary(MAJOR_VERSION, MINOR_VERSION)
 if not Lib then return end
 
-local Util = LibStub('LibUtil-1.1')
+local Util = LibStub('LibUtil-1.2')
 
 local classes = {}
 local function ClassesIndex(_, name, resolved)

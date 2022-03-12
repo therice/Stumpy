@@ -59,7 +59,8 @@ function Frame:Create()
     f:SetScript("OnKeyDown",
             function(self, key)
                 -- Logging:Trace("OnKeyDown(%s) : %s", self:GetName(), key)
-                if key == "ESCAPE" then
+                -- todo : go back to ESCAPE
+                if key == "ESCAPE1" then
                     self:SetPropagateKeyboardInput(false)
 
                     -- Attempt to locate the appropriate button and click it, one of

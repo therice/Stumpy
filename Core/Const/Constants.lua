@@ -10,9 +10,29 @@ if not AddOn._IsTestContext then AddOn._IsTestContext = function() return false 
 AddOn.Constants = {
     name   = name,
     name_c = "|CFF87CEFA" .. name .. "|r",
+    player = "player",
+    raid   = "raid",
+    party  = "party",
+
+    AuraFilter = {
+        Cancelable = "CANCELABLE",
+        Harmful    = "HARMFUL",
+        Helpful    = "HELPFUL",
+    },
 
     Classes = {
-        Shaman = 7
+        DisplayNameToId = {
+
+        },
+        TagNameToId = {
+
+        },
+        IdToDisplayName = {
+
+        },
+        IdToTagName = {
+
+        }
     },
 
     -- https://www.easyrgb.com/en/convert.php
@@ -61,7 +81,11 @@ AddOn.Constants = {
     },
 
     Events = {
+        LearnedSpellInTab      = "LEARNED_SPELL_IN_TAB",
         PlayerEnteringWorld    = "PLAYER_ENTERING_WORLD",
+        PlayerLogin            = "PLAYER_LOGIN",
+        PlayerRegenDisabled    = "PLAYER_REGEN_DISABLED",
+        PlayerRegenEnabled     = "PLAYER_REGEN_ENABLED",
         PlayerTotemUpdate      = "PLAYER_TOTEM_UPDATE",
         SpellsChanged          = "SPELLS_CHANGED",
         UnitSpellcastSucceeded = "UNIT_SPELLCAST_SUCCEEDED"
@@ -73,7 +97,7 @@ AddOn.Constants = {
 
     Keys = {
         RightControl = "RCTRL",
-        LeftControl = "LCTRL",
+        LeftControl  = "LCTRL",
     },
 
     Layout = {
@@ -81,11 +105,13 @@ AddOn.Constants = {
         Grid    = "GRID",
     },
 
-    MaxTotems = MAX_TOTEMS,
-
     Messages = {
-        Enabled             = name .. "_Enabled",
-        ModeChanged         = name .. "_ModeChanged",
+        Enabled               = name .. "_Enabled",
+        EnterCombat           = name .. "_EnterCombat",
+        ExitCombat            = name .. "_ExitCombat",
+        ModeChanged           = name .. "_ModeChanged",
+        SpellsRefreshComplete = name .. "_SpellsRefreshComplete",
+        SpellsRefreshStart    = name .. "_SpellsRefreshStart",
     },
 
     Modes = {
@@ -103,37 +129,37 @@ AddOn.Constants = {
         Ascending   = "ASCENDING",
         Descending  = "DESCENDING"
     },
-
-    Talents = {
-        DualWield      = {2, 18},
-        TotemicMastery = {3, 8},
-    },
-
-    TalentSpells = {
-        DualWield      = 674,
-        TotemicMastery = 16189,
-    },
-
-    -- https://wowpedia.fandom.com/wiki/API_GetTotemInfo
-    -- index of the totem (Fire = 1 Earth = 2 Water = 3 Air = 4)
-    TotemElements = {
-        Fire  = 1,
-        Earth = 2,
-        Water = 3,
-        Air   = 4
-    },
 }
 
 local C = AddOn.Constants
-AddOn.Constants.ClassTags = {
-    Shaman = C_CreatureInfo.GetClassInfo(C.Classes.Shaman).classFile
-}
+
+do
+    local Classes = C.Classes
+
+    for i=1, _G.MAX_CLASSES do
+        local info = C_CreatureInfo.GetClassInfo(i)
+        -- could be nil
+        if info then
+            Classes.DisplayNameToId[info.className] = i
+            Classes.TagNameToId[info.classFile] = i
+        end
+    end
+
+    local druid = C_CreatureInfo.GetClassInfo(11)
+    Classes.DisplayNameToId[druid.className] = 11
+    Classes.TagNameToId[druid.classFile] = 11
+
+    Classes.IdToDisplayName = tInvert(Classes.DisplayNameToId)
+    Classes.IdToTagName = tInvert(Classes.TagNameToId)
+end
 
 -- these are the item ids which correspond to the physical item (totem)
 -- required to cast a totem of that element
-AddOn.Constants.TotemItemIds = {
+--[[
+C.TotemItemIds = {
     [C.TotemElements.Fire]  = 5176,
     [C.TotemElements.Earth] = 5175,
     [C.TotemElements.Water] = 5177,
     [C.TotemElements.Air]   = 5178
 }
+--]]

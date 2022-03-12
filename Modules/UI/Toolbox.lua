@@ -17,6 +17,10 @@ local Toolbox = AddOn:GetModule("Toolbox", true)
 local Totems = AddOn.RequireOnUse('Models.Totem.Totems')
 --- @type Models.Totem.Totem
 local Totem = AddOn.Package('Models.Totem').Totem
+--- @type Models.Spell.Spells
+local Spells = AddOn.RequireOnUse('Models.Spell.Spells')
+--- @type LibTotem
+local LibTotem = AddOn:GetLibrary("Totem")
 
 local CooldownFrame_Set, CooldownFrame_Clear = CooldownFrame_Set, CooldownFrame_Clear
 local ButtonTexture = {
@@ -47,13 +51,14 @@ local TotemFlyoutBar = AddOn.Class('TotemFlyoutBar', FrameContainer)
 --- @class TotemFlyoutBarButton
 local TotemFlyoutBarButton = AddOn.Class('TotemFlyoutBarButton', FrameContainer)
 
+-- https://wowpedia.fandom.com/wiki/SecureHandlers
+-- https://wowpedia.fandom.com/wiki/SecureActionButtonTemplate
+
 -- TotemBar BEGIN --
 function TotemBar:initialize()
 	FrameContainer.initialize(self, function() return self:_CreateFrame() end)
 	--- @type table<number, TotemButton>
 	self.buttons = {}
-	--- @type TotemFlyoutBar
-	self.flyoutBar = TotemFlyoutBar(self)
 	self:CreateButtons()
 	self:PositionAndSize()
 end
@@ -70,11 +75,6 @@ function TotemBar:_CreateFrame()
 	return f
 end
 
---- @return TotemFlyoutBar
-function TotemBar:GetFlyoutBar()
-	return self.flyoutBar
-end
-
 function TotemBar:GetButtons()
 	return self.buttons
 end
@@ -85,7 +85,7 @@ function TotemBar:GetButtonByElement(element)
 		element = element:GetElement()
 	elseif Util.Objects.IsString(element) then
 		element = tonumber(element)
-	elseif Util.Objects.IsNumber(element) then
+	elseif not Util.Objects.IsNumber(element) then
 		error("Specified element is not of the appropriate type")
 	end
 
@@ -99,7 +99,7 @@ end
 
 function TotemBar:CreateButtons()
 	Logging:Trace("CreateButtons()")
-	for element = 1, C.MaxTotems do
+	for element = 1, LibTotem.Constants.MaxTotems do
 		local index = Toolbox:GetElementIndex(element)
 		Logging:Trace("CreateButtons() : %d (element) => %d (index)", element, index)
 		self.buttons[index] = self:CreateButton(element)
@@ -108,7 +108,7 @@ end
 
 --- @param totem Models.Totem.Totem
 function TotemBar:UpdateButton(totem)
-	self:GetButtonByElement(totem):Update(totem)
+	self:GetButtonByElement(totem):Update()
 end
 
 --- @param one TotemButton
@@ -157,7 +157,7 @@ function TotemBar:PositionAndSize()
 end
 -- TotemBar END --
 
--- TotemBarButton BEGIN --
+-- TotemButton BEGIN --
 --- @param parent TotemBar
 --- @param element number
 function TotemButton:initialize(parent, element)
@@ -165,22 +165,44 @@ function TotemButton:initialize(parent, element)
 	self.parent = parent
 	--- @type number
 	self.element = element
+	-- tracks whether there is pending change to associated spell
+	--- @type boolean
+	self.pendingChange = false
 	FrameContainer.initialize(self, function() return self:_CreateFrame() end)
 	--- @type TotemFlyoutButton
 	self.flyoutButton = TotemFlyoutButton(self)
+	--- @type TotemFlyoutBar
+	self.flyoutBar = TotemFlyoutBar(self)
 end
 
+--- @return TotemFlyoutBar
 function TotemButton:GetFlyoutBar()
-	return self.parent:GetFlyoutBar()
+	return self.flyoutBar
+end
+
+--- @return boolean is there a pending change for associated spell
+function TotemButton:HasPendingChange()
+	return self.pendingChange
+end
+
+--- @return number the associated element (e.g. EARTH)
+function TotemButton:GetElement()
+	return self.element
+end
+
+--- @return boolean indicating if associated totem is present (cast with remaining time)
+function TotemButton:IsPresent()
+	return Totems():Get(self:GetElement()):IsPresent()
 end
 
 --- @return string
 function TotemButton:GetName()
-	return Util.Strings.Join('', self.parent:GetFrameName(), 'Totem', tostring(self.element))
+	return Util.Strings.Join('_', self.parent:GetFrameName(), 'Totem' .. tostring(self.element))
 end
 
 function TotemButton:_CreateFrame()
-	local button = CreateFrame('Button', self:GetName(), self.parent:GetFrame(), "BackdropTemplate,SecureActionButtonTemplate")
+	-- local button = CreateFrame('Button', self:GetName(), self.parent:GetFrame(), "BackdropTemplate,SecureHandlerBaseTemplate,SecureActionButtonTemplate")
+	local button = CreateFrame('Button', self:GetName(), self.parent:GetFrame(), "BackdropTemplate,SecureHandlerBaseTemplate,SecureHandlerStateTemplate,SecureActionButtonTemplate")
 	button:SetBackdrop(ButtonTexture)
 	button:SetBackdropColor(0, 0, 0, 1)
 	button:SetBackdropBorderColor(0, 0, 0, 1)
@@ -190,16 +212,25 @@ function TotemButton:_CreateFrame()
 	button.icon:SetTexCoord(unpack({0.08, 0.92, 0.08, 0.92}))
 	UI.SetInside(button.icon)
 
-	button.cooldown = CreateFrame('Cooldown', button:GetName() .. 'Cooldown', button, 'CooldownFrameTemplate')
+	button.cooldown = CreateFrame('Cooldown', button:GetName() .. '_Cooldown', button, 'CooldownFrameTemplate')
 	button.cooldown:SetReverse(true)
 	button.cooldown:SetFrameLevel(button:GetFrameLevel() + 1)
 	UI.SetInside(button.cooldown)
+
+	button.pending = button:CreateTexture(nil, 'OVERLAY')
+	button.pending:SetTexCoord(unpack({0.08, 0.92, 0.08, 0.92}))
+	button.pending:Hide()
+
+	button.count = UI:New('Text', button)
+	button.count:Hide()
 
 	-- any up event is a click
 	button:RegisterForClicks("AnyUp")
 	--- on right click, destroy totem for associated element
 	button:SetAttribute("type2", "destroytotem")
 	button:SetAttribute("totem-slot", self.element)
+	-- on left click, cast totem for associated element
+	button:SetAttribute("type", "spell")
 
 	-- allow button to be moved and swapped with others
 	button:EnableMouse(true)
@@ -209,62 +240,65 @@ function TotemButton:_CreateFrame()
 	button:SetScript("OnDragStop", function() self:OnDragStop() end)
 	button:Show()
 
-	--[[
-	button:SetScript(
-		"OnAttributeChanged",
-		function(self, attr, detail)
-			Logging:Debug("OnAttributeChanged(%s) : %s = %s", self:GetName(), tostring(attr), Util.Objects.ToString(detail))
-		end
-	)
-	--]]
+	button:SetScript("OnAttributeChanged", function(...) self:OnAttributeChanged(...) end)
 
 	return button
 end
 
---- @param totem Models.Totem.Totem
-function TotemButton:Update(totem)
-	totem = Util.Objects.IsNil(totem) and Totems():Get(self.element) or totem
-
-	if not Util.Objects.Equals(self.element, totem:GetElement()) then
-		Logging:Warn(
-			"Update(%d, %d) : specified totem is not for the associated element",
-			self.element, totem:GetElement()
-		)
+--- updates the button based upon associated element's totem, with following priority/order
+---  (1) any present totem (spell) for the element
+---  (2) any configured totem (spell) for the element (for active totem set)
+function TotemButton:Update()
+	local totem = Totems():Get(self.element)
+	if Util.Objects.IsNil(totem) then
+		Logging:Warn("Update(%d) : specified totem is not available for the associated element", self.element)
 		return
 	end
 
-	local icon, desaturated, spellName = nil, nil
+	local inCombat = AddOn:InCombatLockdown()
+	-- grab a reference to spell based upon the totem (game event) or totem set (user configured)
+	--- @type Models.Spell.Spell
+	local spell
 	if totem:IsPresent() then
-		icon = totem:GetIcon()
-		spellName = totem:GetNormalizedName()
+		spell = totem:GetSpell()
 	else
-		local _, spell = Toolbox:GetTotemSet():Get(self.element)
-		if spell then
-			icon = spell:GetIcon()
-			spellName = spell:GetName()
-		else
-			icon, desaturated = C.Icons.TotemGeneric, 1
-		end
+		_, spell = Toolbox:GetTotemSet():Get(self.element)
 	end
 
-	Logging:Trace(
-		"UpdateButton(%d) : %s (present), %s (icon) %s (spell)",
-		self.element, tostring(totem:IsPresent()), tostring(icon), tostring(spellName)
+	Logging:Debug(
+		"UpdateButton(%d) : %s (present), %s (in combat) %s (spell) %s (position)",
+		self.element, tostring(totem:IsPresent()), tostring(inCombat), tostring(spell), tostring(totem:GetPosition())
 	)
 
-	-- todo : in combat
-
-	self._.icon:SetTexture(icon)
-	self._.icon:SetDesaturated(desaturated)
-
-	if Util.Objects.IsSet(spellName) then
-		self._:SetAttribute("type", "spell")
-		self._:SetAttribute("spell", spellName)
+	-- if not in combat, we can set the spell attribute which will
+	-- result in the callback doing the needful with icon, cooldown, etc
+	if not inCombat then
+		self._:SetAttribute("spell", spell and spell.id or nil)
+		self:SetPending(nil)
+	-- cannot modify the 'spell' attribute while in combat, so perform updates directly
 	else
-		self._:SetAttribute("type", nil)
-		self._:SetAttribute("spell", nil)
+		self:OnSpellActivated(spell)
 	end
+end
 
+-- this is called as a result of a spell being "activated", which infers one of the following
+--  (1) a totem event was generated as a result of it being cast
+--  (2) a spell will be cast as a result of the button being "clicked"
+function TotemButton:OnSpellActivated(spell)
+	Logging:Debug("OnSpellActivated(%s)", tostring(spell))
+	self:UpdateIcon(spell)
+	self:UpdateCooldown()
+	--self:UpdateAffectedCount()
+end
+
+function TotemButton:UpdateIcon(spell)
+	Logging:Trace("UpdateIcon(%s)", tostring(spell))
+	self._.icon:SetTexture(spell and spell:GetIcon() or nil)
+	self._.icon:SetDesaturated(Util.Objects.Check(spell, nil, 1))
+end
+
+function TotemButton:UpdateCooldown()
+	local totem = Totems():Get(self.element)
 	if totem:IsPresent() then
 		CooldownFrame_Set(self._.cooldown, totem:GetStartTime(), totem:GetDuration(), 1, true, 1)
 	else
@@ -272,15 +306,135 @@ function TotemButton:Update(totem)
 	end
 end
 
+function TotemButton:UpdateAffectedCount()
+	local totem = Totems():Get(self.element)
+
+	local function UpdateDisplay(playerCount)
+		Logging:Debug("UpdatePlayerCount.UpdateDisplay(%d) : %d", self.element, playerCount)
+		if playerCount == 0 then
+			self._.count:Hide()
+			return
+		end
+
+		self._.count:SetText(tonumber(playerCount))
+		self._.count:Show()
+	end
+
+	local function CancelTimer()
+		if self.pcTimer then
+			Logging:Debug("UpdatePlayerCount.CancelTimer(%d)", self.element)
+			Toolbox:CancelTimer(self.pcTimer)
+			self.pcTimer = nil
+		end
+	end
+
+	local function StartTimer()
+		if not self.pcTimer then
+			Logging:Debug("UpdatePlayerCount.StartTimer(%d)", self.element)
+				AddOn.Timer.After(
+					0,
+					function()
+						CancelTimer()
+						self.pcTimer = Toolbox:ScheduleRepeatingTimer(
+							function()
+								UpdateDisplay(totem:GetUnitAffectedCount())
+							end,
+							1
+						)
+					end
+				)
+		end
+	end
+
+	if totem:IsPresent() then
+		StartTimer()
+	else
+		CancelTimer()
+		UpdateDisplay(0)
+	end
+end
+
+function TotemButton:SetPending(spell)
+	self.pendingChange = not Util.Objects.IsNil(spell)
+
+	-- nothing pending, hide the associated texture
+	if not self:HasPendingChange() then
+		self._.pending:Hide()
+		return
+	end
+
+	-- update the pending texture with spell
+	self._.pending:SetTexture(spell:GetIcon())
+	self._.pending:Show()
+end
+
+-- this is called as a result of a spell being "selected", which infers one of the following
+--  (1) the active totem set was modified for the associated element, regardless of mechanism (flyout bar or configuration)
+function TotemButton:OnSpellSelected(spell)
+	local inCombat, totem = AddOn:InCombatLockdown(), Totems():Get(self.element)
+	Logging:Debug(
+		"OnSpellSelected(%d) : %s (in combat) %s (totem) %s (spell)",
+		self.element, tostring(inCombat), tostring(totem), tostring(spell)
+	)
+
+	-- if we're in combat, don't modify any state until we exit combat
+	-- just show the selection as pending
+	if inCombat then
+		self:SetPending(spell)
+	else
+		-- if the totem is present, regardless of combat status,
+		-- set the selected spell as pending
+		-- this allows for current cast spell to retain priority until it elapses
+		if totem:IsPresent() then
+			self:SetPending(spell)
+		-- we can activate the selected spell immediately
+		else
+			self._:SetAttribute("spell", spell.id)
+		end
+	end
+end
+
+--- SetAttribute calls result in this being fired, which does not infer combat state
+--- as you can set non-reserved attributes on protected frames during combat, but cannot set
+--- reserved attributes during combat (i.e. spell, macrotext)
+function TotemButton:OnAttributeChanged(_--[[ frame --]], key, value)
+	Logging:Debug("OnAttributeChanged(%s) : %s = %s", self:GetName(), tostring(key), Util.Objects.ToString(value))
+	if Util.Objects.In(key, "spell", "selectedspell") then
+		local spell
+		if Util.Objects.IsNumber(value) then
+			spell = Spells():GetById(value)
+		end
+
+		Logging:Debug("OnAttributeChanged(%s) : %s = %s %s (found spell)",  self:GetName(), tostring(key), tostring(value), tostring(Util.Objects.IsSet(spell)))
+
+		if Util.Strings.Equal(key, "spell") then
+			self:OnSpellActivated(spell)
+		elseif Util.Strings.Equal(key, "selectedspell") then
+			-- just update the totem set and rely upon event callbacks to handle based upon state
+			Toolbox:SetElementSpell(self.element, spell)
+		end
+	end
+end
+
 function TotemButton:PositionAndSize(index, size, spacing, grow)
 	self._:SetSize(size, size)
 	self._:ClearAllPoints()
 
+	self._.pending:SetSize(size/2, size/2)
+	self._.pending:ClearAllPoints()
+
+	self._.count:SetSize(size/2, size/2)
+	self._.count:ClearAllPoints()
+
 	if Util.Objects.Equals(grow, C.Direction.Horizontal) then
 		self._:SetPoint('LEFT', ((index - 1) * size) + (spacing * index), 0)
+		self._.pending:SetPoint("TOPRIGHT", self._, "BOTTOMRIGHT", 0, -spacing/2)
+		self._.count:SetPoint("TOPLEFT", self._, "BOTTOMLEFT", 0, -spacing/2)
 		self.flyoutButton:PositionAndSize(size, spacing, grow)
 	elseif Util.Objects.Equals(grow, C.Direction.Vertical)then
 		self._:SetPoint('TOP', 0, -(((index - 1) * size) + (spacing * index)))
+		self._.pending:SetPoint("BOTTOMRIGHT", self._, "BOTTOMLEFT", -spacing/2, 0)
+		self._.count:SetPoint("TOPRIGHT", self._, "TOPLEFT", -spacing/2, 0)
 		self.flyoutButton:PositionAndSize(size, spacing, grow)
 	else
 		InvalidGrow(grow)
@@ -343,16 +497,18 @@ end
 
 --- @return string
 function TotemFlyoutButton:GetName()
-	return Util.Strings.Join('', self.parent:GetFrameName(), 'Flyout')
+	return Util.Strings.Join('_', self.parent:GetFrameName(), 'FlyoutButton')
 end
 
 function TotemFlyoutButton:_CreateFrame()
-	local button = UI:NewNamed('Button', self.parent:GetFrame(), self:GetName(), nil, "BackdropTemplate,SecureHandlerClickTemplate,SecureHandlerStateTemplate")
+	-- local button = UI:NewNamed('Button', self.parent:GetFrame(), self:GetName(), nil, "BackdropTemplate,SecureHandlerClickTemplate,SecureHandlerStateTemplate")
+	local button = UI:NewNamed('Button', self.parent:GetFrame(), self:GetName(), nil, "BackdropTemplate,SecureHandlerClickTemplate")
 	button.Texture:SetColorTexture(0.25, 0.78, 0.92, 1)
 	button.HighlightTexture:SetColorTexture(0.25, 0.78, 0.92, 1)
 	button.HighlightTexture:SetGradientAlpha("VERTICAL", 0.05, 0.06, 0.09, 1, 0.20, 0.21, 0.25, 1)
 	button:RegisterForClicks("LeftButtonDown")
 
+	--[[
 	button:SetScript(
 		"PreClick",
 		function(b)
@@ -360,30 +516,45 @@ function TotemFlyoutButton:_CreateFrame()
 			local flyoutBar = self.parent:GetFlyoutBar()
 			-- only reposition and update when not currently visible
 			if not flyoutBar._:IsVisible() then
-				flyoutBar:SetElement(self.parent.element)
 				flyoutBar:Reposition(b)
 				flyoutBar:UpdateButtons()
 			end
 		end
 	)
+	--]]
+
+	-- this is all about showing/hiding flyouts
+	--
 	-- parent <- child hierarchy
-	-- totem bar (ref to flyoutBar) <- totem button <- flyout button
+	-- totem button (ref to flyoutBar) <- flyout button (self)
+	-- totem bar (ref to all flyoutBar(s) by name) <- totem button (attribute for name of active flyoutBar) <- flyout button (self)
 	button:SetAttribute("_onclick",[[
-		local flyoutBarFrame = self:GetParent():GetParent():GetFrameRef("flyoutBarFrame")
-		if flyoutBarFrame:IsVisible() then
-			flyoutBarFrame:Hide()
-		else
-			flyoutBarFrame:Show()
+		local totemButton = self:GetParent()
+		local totemBar = totemButton:GetParent()
+
+		-- reference to the flyoutBar bound to this button
+		local flyoutBar = totemButton:GetFrameRef("flyoutBar")
+		-- reference to the flyoutBar's name which is currently active (shown)
+		local flyoutBarActive = totemBar:GetAttribute("flyoutBarActive")
+
+		-- if we have an active flyoutBar, hide it before any action on current one
+		if flyoutBarActive then
+			local toHide = totemBar:GetFrameRef(flyoutBarActive)
+			if toHide and toHide:GetName() ~= flyoutBar:GetName() and toHide:IsVisible() then
+				toHide:Hide()
+			end
+		end
+
+		if flyoutBar then
+			if flyoutBar:IsVisible() then
+				flyoutBar:Hide()
+				totemBar:SetAttribute("flyoutBarActive", nil)
+			else
+				flyoutBar:Show()
+				totemBar:SetAttribute("flyoutBarActive", flyoutBar:GetName())
+			end
 		end
 	]])
-
-	--button:SetScript(
-	--	"OnClick",
-	--	function(btn)
-	--		local flyoutBar = self.parent.parent.flyoutBar
-	--		flyoutBar:Toggle(btn, self.parent.element)
-	--	end
-	--)
 
 	button:Show()
 
@@ -410,31 +581,33 @@ end
 local FlyoutRows, FlyoutColumns = 3, 3
 local FlyoutMaxButtons =  FlyoutRows * FlyoutColumns
 
---- @param parent TotemBar
+--- @param parent TotemButton
 function TotemFlyoutBar:initialize(parent)
 	self.parent = parent
 	FrameContainer.initialize(self, function() return self:_CreateFrame() end)
 	--- @type table<number, TotemFlyoutBarButton>
 	self.buttons = {}
-	--- @type number
-	self.element = nil
 	self:CreateButtons()
 	self:PositionAndSize()
+	self:UpdateButtons()
 	self:Hide()
 end
 
-function TotemFlyoutBar:SetElement(element)
-	self.element = element
+function TotemFlyoutBar:GetElement()
+	return tonumber(self.parent.element)
 end
 
 --- @return string
 function TotemFlyoutBar:GetName()
-	return AddOn:Qualify('TotemFlyoutBar')
+	return Util.Strings.Join('_', self.parent:GetFrameName(), 'FlyoutBar')
 end
 
 function TotemFlyoutBar:_CreateFrame()
 	local f = CreateFrame('Frame', self:GetName(), self.parent:GetFrame(), "BackdropTemplate,SecureHandlerBaseTemplate,SecureHandlerShowHideTemplate")
-	self.parent._:SetFrameRef("flyoutBarFrame", f)
+	-- set a reference to this frame, by static id, on the TotemButton (parent)
+	self.parent._:SetFrameRef("flyoutBar", f)
+	-- set a reference to this frame, by name, on the TotemBar (parent's parent)
+	self.parent.parent._:SetFrameRef(f:GetName(), f)
 	return f
 end
 
@@ -466,19 +639,13 @@ function TotemFlyoutBar:PositionAndSize()
 		InvalidLayout(layout)
 	end
 
+
+	-- it should be relative to the flyout bar button
+	self:Reposition(self.parent.flyoutButton._)
+
 	for i=1, buttonCount do
 		self.buttons[i]:PositionAndSize(size, spacing, grow, layout)
 	end
-
-	--[[
-	if Util.Objects.Equals(grow, C.Direction.Horizontal) then
-		self._:Height((size * buttonCount) + (spacing * buttonCount) + spacing)
-		self._:Width(size + spacing * 2)
-	else
-		self._:Width((size * buttonCount) + (spacing * buttonCount) + spacing)
-		self._:Height(size + spacing * 2)
-	end
-	--]]
 end
 
 function TotemFlyoutBar:Reposition(at)
@@ -495,39 +662,24 @@ function TotemFlyoutBar:Reposition(at)
 	end
 end
 
---[[
-function TotemFlyoutBar:Toggle(at, element)
-	if self._:IsVisible() then
-		self.element = nil
-		self:Hide()
-	else
-		local grow = Toolbox:GetBarGrow()
-		self._:ClearAllPoints()
-		if Util.Objects.Equals(grow, C.Direction.Horizontal) then
-			self._:SetPoint('BOTTOM', at, "TOP", 0, 0)
-		elseif Util.Objects.Equals(grow, C.Direction.Vertical) then
-			self._:SetPoint('LEFT', at, "RIHHT", 0, 0)
-		end
-
-		self:UpdateButtons(element)
-		self:Show()
-	end
-end
---]]
-
 function TotemFlyoutBar:UpdateButtons()
-	if not self.element then
+	local element = self:GetElement()
+	Logging:Debug("UpdateButtons(%d)", element)
+
+	if element <= 0 then
 		for index = 1, #self.buttons do
 			self.buttons[index]:Hide()
 		end
 	else
-		local spells = Toolbox:GetSpellsByTotem(self.element)
+		local spells = Toolbox:GetSpellsByTotem(element)
 		local spellCount, buttonCount = #spells, #self.buttons
 
 		if spellCount > buttonCount then
-			Logging:Warn("UpdateButtons(%d) : spell count exceeds available buttons", self.element)
+			Logging:Warn("UpdateButtons(%d) : spell count exceeds available buttons", element)
+		elseif spellCount == 0 then
+			Logging:Warn("UpdateButtons(%d) : no available spells", element)
 		else
-			Logging:Trace("UpdateButtons(%d) : %d (spells) %d (buttons)", self.element, spellCount, buttonCount)
+			Logging:Debug("UpdateButtons(%d) : %d (spells) %d (buttons)", element, spellCount, buttonCount)
 		end
 
 		for index, spell in pairs(spells) do
@@ -555,11 +707,11 @@ function TotemFlyoutBarButton:initialize(parent, index)
 end
 
 function TotemFlyoutBarButton:GetName()
-	return Util.Strings.Join('', self.parent:GetFrameName(), 'Totem', tostring(self.index))
+	return Util.Strings.Join('_', self.parent:GetFrameName(), 'Button' .. tostring(self.index))
 end
 
 function TotemFlyoutBarButton:_CreateFrame()
-	local button = CreateFrame('Button', self:GetName(), self.parent:GetFrame(), "BackdropTemplate,SecureActionButtonTemplate")
+	local button = CreateFrame('Button', self:GetName(), self.parent:GetFrame(), "BackdropTemplate,SecureHandlerBaseTemplate,SecureActionButtonTemplate")
 	button:SetBackdrop(ButtonTexture)
 	button:SetBackdropColor(0, 0, 0, 1)
 	button:SetBackdropBorderColor(0, 0, 0, 1)
@@ -569,9 +721,29 @@ function TotemFlyoutBarButton:_CreateFrame()
 	button.icon:SetTexCoord(unpack({0.08, 0.92, 0.08, 0.92}))
 	UI.SetInside(button.icon)
 
+	-- any up event is a click
+	button:RegisterForClicks("AnyUp")
+	-- on left click, cast totem for associated spell
+	button:SetAttribute("type", "spell")
+
 	button:SetScript('OnEnter', function() if self.spell then UIUtil.Link(self._, self.spell.link) end end)
 	button:SetScript('OnLeave', function() if self.spell then UIUtil:HideTooltip() end end)
 
+	-- this maps right click to selecting the associated spell for the main button
+	-- it does NOT cast the spell, only designates it for being the new spell for the associated totem
+	-- if in combat, it will queue the replacement
+	-- if not in combat, it will update the underlying totem set
+	button:SetAttribute("type2", "selectSpell")
+	button:SetAttribute("_selectSpell", [[
+		-- print('_selectSpell(' .. self:GetAttribute('spell') .. ')')
+		-- the flyoutBar to which this button is bound
+		local flyoutBar = self:GetParent()
+		-- the totem button to which the flyoutBar is bound
+		local totemButton = flyoutBar:GetParent()
+		totemButton:SetAttribute('selectedspell', self:GetAttribute('spell'))
+	]])
+
+	button:WrapScript(button, "PostClick", [[ self:GetParent():Hide() ]])
 	return button
 end
 
@@ -585,22 +757,28 @@ function TotemFlyoutBarButton:SetSpell(spell)
 	self.spell = spell
 end
 
+-- should be fine to call SetAttribute() on the action here, as this is called once per button
+-- when the associated flyout bar is created. the caveat would be when spells change, which would need
+-- to rebuild all the buttons. however, that should also not occur in combat and is a result of (un)learning
+-- a new spell or rang from trainer
 function TotemFlyoutBarButton:Update()
+	self._:SetAttribute("spell", self.spell and self.spell.id or nil)
+	self._.icon:SetTexture(self.spell and self.spell:GetIcon() or nil)
 	if self.spell then
-		self._.icon:SetTexture(self.spell:GetIcon())
 		self:Show()
 	else
 		self:Hide()
 	end
 end
 
+-- Grid Layout with Horizontal Grow
 --[[ index (row, column)
 01 (0,0)    02 (0,1)    03  (0,2)
 04 (1,0)    05 (1,1)    06  (1,2)
 07 (2,0)    08 (2,1)    09  (2,2)
 --]]
 function TotemFlyoutBarButton:PositionAndSize(size, spacing, grow, layout)
-	Logging:Debug("PositionAndSize(%d, %d, %s)", size, spacing, grow)
+	Logging:Trace("PositionAndSize(%d, %d, %s)", size, spacing, grow)
 	self._:SetSize(size, size)
 	self._:ClearAllPoints()
 
@@ -621,7 +799,7 @@ function TotemFlyoutBarButton:PositionAndSize(size, spacing, grow, layout)
 		local column = math.floor((self.index - 1) % FlyoutColumns)
 		local x = math.floor((column * size) + (column * spacing))
 		local y = math.floor((row * size) + (row * spacing))
-		Logging:Debug(
+		Logging:Trace(
 			"PositionAndSize(%d) : (row=%d, col=%d) (x=%d, y=%d)",
 			self.index, row, column, x, y
 		)

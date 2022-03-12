@@ -11,6 +11,9 @@ local Event = AddOn.Require('Core.Event')
 local Spells = AddOn.RequireOnUse('Models.Spell.Spells')
 --- @type Models.Totem.Totems
 local Totems = AddOn.RequireOnUse('Models.Totem.Totems')
+--- @type Core.Message
+local Message = AddOn.RequireOnUse('Core.Message')
+
 
 function AddOn:SubscribeToEvents()
 	Logging:Debug("SubscribeToEvents(%s)", self:GetName())
@@ -36,25 +39,53 @@ end
 
 -- track whether initial load of addon or has it been reloaded (either via login or explicit reload)
 local initialLoad = true
+
+function AddOn:OnPlayerLogin(...)
+	Logging:Debug("OnPlayerLogin() : %s", Util.Objects.ToString({...}))
+
+	local handle
+
+	local function InitalizeTotems()
+		Logging:Debug("InitalizeTotems()")
+		AddOn.Unsubscribe(handle)
+		Totems():Initialize()
+	end
+
+	-- wait for spells to be refreshed before initializing totems
+	handle = Message():BulkSubscribe({
+		[C.Messages.SpellsRefreshComplete] = function(...) InitalizeTotems() end,
+	})
+
+	Spells():Enable()
+end
+
+
 -- this event is triggered when the player logs in, /reloads the UI, or zones between map instances
 -- basically whenever the loading screen appears
 --
 -- initial login = true, false
 -- reload ui = false, true
 -- instance zone event = false, false
-function AddOn:PlayerEnteringWorld(_, isLogin, isReload)
+function AddOn:OnPlayerEnteringWorld(_, isLogin, isReload)
 	Logging:Debug(
-		"PlayerEnteringWorld(%s) : isLogin=%s, isReload=%s, initialLoad=%s",
+		"OnPlayerEnteringWorld(%s) : isLogin=%s, isReload=%s, initialLoad=%s",
 		 tostring(nil), tostring(isLogin), tostring(isReload), tostring(initialLoad)
 	)
 	-- if we have not yet handled the initial entering world event
 	if initialLoad then
 		initialLoad = false
-		Totems():Initialize()
 	end
 end
 
-function AddOn:SpellsChanged()
-	Logging:Debug("SpellsChanged()")
-	Spells():Refresh()
+-- for events that invoke OnEnterCombat and OnExitCombat, we do a one time subscription and then
+-- dispatch via messages. this allows for emulation outside of combat for testing/development purposes
+
+function AddOn:OnEnterCombat(...)
+	Logging:Debug("OnEnterCombat() : %s", Util.Objects.ToString({...}))
+	self:SendMessage(C.Messages.EnterCombat, ...)
+end
+
+function AddOn:OnExitCombat(...)
+	Logging:Debug("OnExitCombat() : %s", Util.Objects.ToString({...}))
+	self:SendMessage(C.Messages.ExitCombat, ...)
 end

@@ -1,5 +1,5 @@
 local Lib = LibStub("LibRx-1.1", true)
-local Util = LibStub("LibUtil-1.1", true)
+local Util = LibStub("LibUtil-1.2", true)
 
 --- @class Observer
 local Observer = Lib:_DefineClass('rx', 'Observer')

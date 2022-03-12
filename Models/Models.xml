@@ -3,6 +3,8 @@
     <Script file="Date.lua"/>
     <Script file="Versioned.lua"/>
     <Script file="Dao.lua"/>
+    <Script file="Player.lua"/>
     <Script file="Spell\Spells.lua"/>
+    <Script file="Totem\TotemTimers.lua"/>
     <Script file="Totem\Totems.lua"/>
 </Ui>

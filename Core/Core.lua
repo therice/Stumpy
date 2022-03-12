@@ -57,7 +57,17 @@ function AddOn:RegisterChatCommands()
 			L['chat_commands_ec'],
 			function()
 				ModeToggle(self, C.Modes.EmulateCombat)
-				self:Print("Combat Emulation = " .. tostring(self:CombatEmulationEnabled()))
+				local emulatedAfter = self:CombatEmulationEnabled()
+				self:Print("Combat Emulation = " .. tostring(emulatedAfter))
+
+				-- only generate fake events if not actually in combat lockdown
+				if not InCombatLockdown() then
+					if emulatedAfter then
+						AddOn:OnEnterCombat()
+					else
+						AddOn:OnExitCombat()
+					end
+				end
 			end
         }
 	)

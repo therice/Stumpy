@@ -15,9 +15,11 @@ local TotemSetDao = AddOn.Package('Models.Totem').TotemSetDao
 local Spells = AddOn.RequireOnUse('Models.Spell.Spells')
 --- @type Models.Dao
 local Dao = AddOn.Package('Models').Dao
+--- @type Core.Message
+local Message = AddOn.RequireOnUse('Core.Message')
 
 --- @class Toolbox
-local Toolbox = AddOn:NewModule('Toolbox', "AceTimer-3.0", "AceHook-3.0")
+local Toolbox = AddOn:NewModule('Toolbox', "AceTimer-3.0", "AceHook-3.0", "AceEvent-3.0")
 
 Toolbox.defaults = {
 	profile = {
@@ -43,6 +45,8 @@ Toolbox.defaults = {
 function Toolbox:OnInitialize()
 	Logging:Debug("OnInitialize(%s)", self:GetName())
 	self.db = AddOn.db:RegisterNamespace(self:GetName(), self.defaults)
+	--- @type table<number, rx.Subscription>
+	self.subscriptions = nil
 	--- @type TotemBar
 	self.totemBar = nil
 	--- @type Models.Totem.TotemSetDao
@@ -59,6 +63,27 @@ function Toolbox:OnEnable()
 	Logging:Debug("OnEnable(%s)", self:GetName())
 	self:AddDefaultTotemSet()
 	self:RegisterCallbacks()
+
+	--[[
+	self:ScheduleRepeatingTimer(function()
+		for index = 1, 40 do
+			local result = {
+				UnitBuff(C.player, index)
+			}
+
+			if Util.Objects.IsTable(result) and Util.Tables.Count(result) > 0 then
+				Logging:Debug("Buffs(%d) => %s", index, Util.Objects.ToString(result))
+			else
+				break
+			end
+		end
+	end, 2)
+	--]]
+end
+
+function Toolbox:OnDisable()
+	Logging:Debug("OnEnable(%s)", self:GetName())
+	self:UnregisterCallbacks()
 end
 
 function Toolbox:AddDefaultTotemSet()
@@ -69,18 +94,34 @@ function Toolbox:AddDefaultTotemSet()
 end
 
 function Toolbox:RegisterCallbacks()
+	--[[
+	local function OnMessage(event)
+		Logging:Warn("OnMessage(%s)", event)
+	end
+
+	self:RegisterMessage(C.Messages.SpellsRefreshStart, OnMessage)
+	self:RegisterMessage(C.Messages.SpellsRefreshComplete, OnMessage)
+	--]]
+
+	self.subscriptions = Message():BulkSubscribe({
+         [C.Messages.EnterCombat] = function(...) self:OnEnterCombat(...) end,
+         [C.Messages.ExitCombat] = function(...) self:OnExitCombat(...) end
+     })
+
 	Totems():RegisterCallbacks(self, {
-		[Totems().Events.TotemUpdated] = function(...) self:TotemUpdated(...) end
+		[Totems().Events.TotemUpdated] = function(...) self:OnTotemEvent(...) end
 	})
 
 	self.totemSets:RegisterCallbacks(self, {
-		[Dao.Events.EntityUpdated] = function(...) self:TotemSetDaoEvent(...) end
+		[Dao.Events.EntityUpdated] = function(...) self:OnTotemSetDaoEvent(...) end
 	})
 end
 
 function Toolbox:UnregisterCallbacks()
 	self.totemSets:UnregisterAllCallbacks(self)
 	Totems():UnregisterAllCallbacks(self)
+	AddOn.Unsubscribe(self.subscriptions)
+	self.subscriptions = nil
 end
 
 function Toolbox:EnableOnStartup()
@@ -114,50 +155,69 @@ function Toolbox:GetTotemSet()
 end
 
 function Toolbox:ShouldEnqueueEvent()
-	-- need to enqueue events should spells not yet be initialized OR
-	-- we already enqueued events and processing is pending
-	return not Spells():IsInitialized() or
-		(not Util.Objects.IsNil(self.eventQueue.timer) and Util.Tables.Count(self.eventQueue.events) > 0)
+	-- need to enqueue events should
+	-- (1) spells not yet be initialized OR
+	-- (2) we already enqueued events and processing is pending
+	local spellsReady = (Spells():IsEnabled() and Spells():IsLoaded())
+	local eventsEnqueued = (not Util.Objects.IsNil(self.eventQueue.timer) and Util.Tables.Count(self.eventQueue.events) > 0)
+	local enqueue = not spellsReady or eventsEnqueued
+	Logging:Trace("ShouldEnqueueEvent(%s (spells), %s (events)) : %s", tostring(spellsReady), tostring(eventsEnqueued), tostring(enqueue))
+	return enqueue
 end
 
 --- @param event string
 --- @param totem Models.Totem.Totem
-function Toolbox:EnqueueEvent(event, totem)
-	Logging:Trace("EnqueueEvent(%s) : %s", tostring(event), tostring(totem))
-
+function Toolbox:EnqueueTotemEvent(event, totem)
 	local queue = self.eventQueue
-	if queue.timer then
-		self:CancelTimer(queue.timer)
-		queue.timer = nil
+	Logging:Debug("EnqueueTotemEvent(%s) : %s, %s", tostring(event), tostring(totem), tostring(queue.timer))
+
+	local function CancelTimer()
+		if queue.timer then
+			local cancelled = self:CancelTimer(queue.timer)
+			Logging:Debug("EnqueueTotemEvent() : Cancelling timer (%s)", tostring(cancelled))
+			queue.timer = nil
+		end
 	end
 
+	--CancelTimer()
 	Util.Tables.Push(queue.events, {event, totem})
-	queue.timer = self:ScheduleTimer(function() self:ProcessEvents() end, 2)
+
+	-- dumb dumb dumb, which is due to this being fired close to login and scheduler being borked
+	-- otherwise would only need the call to ScheduleTimer()
+	AddOn.Timer.After(0,
+		function()
+			CancelTimer()
+			queue.timer = self:ScheduleTimer(function() self:ProcessTotemEvents() end, 2)
+		end
+	)
 end
 
-function Toolbox:ProcessEvents()
+function Toolbox:ProcessTotemEvents()
 	local queue = self.eventQueue
-	Logging:Trace("ProcessEvents(%d)", Util.Tables.Count(queue.events))
+	Logging:Debug("ProcessTotemEvents(%d)", Util.Tables.Count(queue.events))
 
 	local process = Util.Tables.Copy(queue.events)
 	queue.events = {}
 	queue.timer = nil
 
 	for _, eventDetail in pairs(process) do
-		self:TotemUpdated(eventDetail[1], eventDetail[2])
+		self:OnTotemEvent(eventDetail[1], eventDetail[2])
 	end
 end
 
 --- @param event string
 --- @param totem Models.Totem.Totem
-function Toolbox:TotemUpdated(event, totem)
-	Logging:Debug("Update(%s) : %s", event, Util.Objects.ToString(totem:toTable()))
+function Toolbox:OnTotemEvent(event, totem)
+	local shouldEnqueue = self:ShouldEnqueueEvent()
+	Logging:Debug("OnTotemEvent(%s) : %s, %s (enqueue)", event, Util.Objects.ToString(totem:toTable()), tostring(shouldEnqueue))
 
-	if self:ShouldEnqueueEvent() then
-		self:EnqueueEvent(event, totem)
+	if shouldEnqueue then
+		self:EnqueueTotemEvent(event, totem)
 		return
 	end
 
+	-- todo : InCombat and totemBar not yet created
+	-- if the totem bar isn't visible, create and display
 	if not self.totemBar then self:GetFrame() end
 
 	if Util.Objects.Equals(Totems().Events.TotemUpdated, event) then
@@ -165,26 +225,44 @@ function Toolbox:TotemUpdated(event, totem)
 	end
 end
 
-function Toolbox:TotemSetDaoEvent(event, eventDetail)
-	Logging:Debug("TotemSetDaoEvent(%s) : %s", event, Util.Objects.ToString(eventDetail))
+function Toolbox:OnTotemSetDaoEvent(event, eventDetail)
+	Logging:Debug("OnTotemSetDaoEvent(%s) : %s", event, Util.Objects.ToString(eventDetail))
 
 	-- don't care about event if the totem bar isn't visible
-	if not self.totemBar then
-		return
-	end
+	if not self.totemBar then return end
 
-	--[[
+	-- there may be extra detail on the event which designates what totem bar button to update
 	local extra = unpack(eventDetail.extra)
-	if Util.Objects.IsTable(extra) and Util.Objects.IsNumber(extra.element) then
-		self.frame:UpdateButton(Totems():Get(extra.element))
+	if Util.Objects.IsTable(extra) and Util.Objects.IsNumber(extra.element) and Util.Objects.IsSet(extra.spell) then
+		self.totemBar:GetButtonByElement(extra.element):OnSpellSelected(extra.spell)
 	else
-		self.frame:UpdateButtons()
+		Logging:Warn("OnTotemSetDaoEvent() : NOT IMPLEMENTED")
+		--self.frame:UpdateButtons()
 	end
-	--]]
+end
+
+function Toolbox:OnEnterCombat()
+	Logging:Debug("OnEnterCombat()")
+	-- don't care about event if the totem bar isn't visible
+	if not self.totemBar then return end
+end
+
+function Toolbox:OnExitCombat()
+	Logging:Debug("OnExitCombat()")
+	-- don't care about event if the totem bar isn't visible
+	if not self.totemBar then return end
+
+	for _, button in pairs(self.totemBar:GetButtons()) do
+		if button:HasPendingChange() then
+			if not button:IsPresent() then
+				button:Update()
+			end
+		end
+	end
 end
 
 function Toolbox:GetSpellsByTotem(element)
-	return Spells():GetHighestRanksByTotem(Totems():GetTotemName(element))
+	return Spells():GetHighestRanksByTotemElement(element)
 end
 
 function Toolbox:GetBarButtonSize()
@@ -252,11 +330,12 @@ function Toolbox:SetElementSpell(element, spell)
 		if not Util.Objects.Equals(spell.id, currentSpell.id) then
 			set:SetSpell(element, spell.id)
 			Logging:Trace("SetElementSpell() : %s", Util.Objects.ToString(set:toTable()))
-			self.totemSets:Update(set, 'totems', true, {element = element})
+			self.totemSets:Update(set, 'totems', true, {element = element, spell = spell})
 		end
 	end
 end
 
+--[[
 function Toolbox:CastByElement(element)
 	element = tonumber(Util.Objects.Default(element, "0"))
 	Logging:Trace("CastByElement(%s)", element)
@@ -266,3 +345,4 @@ function Toolbox:CastByElement(element)
 		macro:Click("LeftButton", false)
 	end
 end
+--]]
