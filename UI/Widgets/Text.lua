@@ -18,8 +18,8 @@ end
 function Text:Create()
     local text = self.parent:CreateFontString(nil, "ARTWORK", self.font)
     if self.size then
-        local fn = text:GetFont()
-        if fn then text:SetFont(fn, self.size) end
+        local fnt = text:GetFont()
+        if fnt then text:SetFont(fnt, self.size) end
     end
 
     text:SetJustifyH("LEFT")

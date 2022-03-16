@@ -49,7 +49,7 @@ function Totem:HasPulse()
 end
 
 function Totem:GetPulse()
-	return self.pulse
+	return self:HasPulse() and self.pulse or 0
 end
 
 function Totem:IsApplicableTo(class)

@@ -54,7 +54,7 @@ end
 function Dao:Reconstitute(id, attrs)
 	local entity = self.entityClass:reconstitute(attrs)
 	entity.id = id
-	Logging:Trace("Dao.Reconstitute[%s](%s) : %s", tostring(self.entityClass), tostring(id), Util.Objects.ToString(entity:toTable()))
+	Logging:Debug("Dao.Reconstitute[%s](%s) : %s", tostring(self.entityClass), tostring(id), Util.Objects.ToString(entity:toTable()))
 	return entity
 end
 
@@ -74,6 +74,10 @@ function Dao:UnregisterCallbacks(target, callbacks)
 	end
 end
 
+function Dao:Exists(id)
+	return self.db[id] ~= nil
+end
+
 -- C(reate)
 --- @param entity any the entity to add
 --- @param fireCallbacks boolean should callbacks be fired
@@ -82,7 +86,7 @@ function Dao:Add(entity, fireCallbacks, ...)
 	fireCallbacks = Util.Objects.Default(fireCallbacks, true)
 	local asTable = entity:toTable()
 	asTable['id'] = nil
-	Logging:Trace("Dao.Add[%s](%s) : %s", tostring(self.entityClass), entity.id, Util.Objects.ToString(asTable))
+	Logging:Debug("Dao.Add[%s](%s) : %s", tostring(self.entityClass), entity.id, Util.Objects.ToString(asTable))
 	if self.ShouldPersist() then
 		self.module:SetDbValue(self.db, entity.id, asTable)
 		if fireCallbacks then
@@ -95,7 +99,7 @@ end
 function Dao:Get(id)
 	local attrs = self.db[id]
 	if attrs then
-		return self:Reconstitute(id, self.db[id])
+		return self:Reconstitute(id, attrs)
 	else
 		Logging:Warn("Dao.Get[%s](%s) : No instance found", tostring(self.entityClass), id)
 		return nil

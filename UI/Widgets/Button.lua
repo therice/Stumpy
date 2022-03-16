@@ -70,7 +70,8 @@ function Button:Create()
         b,
         'Tooltip', Button.SetTooltip,
         'GetTextObj', Button.GetTextObj,
-        'FontSize', Button.SetFontSize
+        'FontSize', Button.SetFontSize,
+        'SetTextVertical', Button.SetTextVertical
     )
 
     b._Disable = b.Disable
@@ -82,6 +83,23 @@ end
 function Button:Disable()
     self:_Disable()
     return self
+end
+
+function Button:SetTextVertical(text)
+    function vertical(str)
+        -- dealing with multi-byte?
+        local _, len = str:gsub("[^\128-\193]", "")
+
+        -- nah...
+        if(len == #str) then
+            return str:gsub(".", "%1\n")
+        else
+            return str:gsub("([%z\1-\127\194-\244][\128-\191]*)", "%1\n")
+        end
+    end
+
+    self.text:SetText(vertical(text))
+
 end
 
 function Button:GetTextObj()

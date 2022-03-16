@@ -54,13 +54,15 @@ local Totems = {
 	{ Element.Fire, 10587, 0, 7466, 2 },  -- Magma Rank 4
 	{ Element.Fire, 25552, 0, 1548, 2 },  -- Magma Rank 5
 
-	{ Element.Fire, 3599, 0, 2523, 1 },   -- Searing Rank 1
-	{ Element.Fire, 6363, 0, 3902, 1 },   -- Searing Rank 2
-	{ Element.Fire, 6364, 0, 3903, 1 },   -- Searing Rank 3
-	{ Element.Fire, 6365, 0, 3904, 1 },   -- Searing Rank 4
-	{ Element.Fire, 10437, 0, 7400, 1 },  -- Searing Rank 5
-	{ Element.Fire, 10438, 0, 7402, 1 },  -- Searing Rank 6
-	{ Element.Fire, 25533, 0, 15480, 1 }, -- Searing Rank 7
+	-- this totem attacks continuously, with cast times randing from 1.5 to 2.5 seconds
+	-- averages don't make sense for a repeating pulse
+	{ Element.Fire, 3599, 0, 2523 },   -- Searing Rank 1
+	{ Element.Fire, 6363, 0, 3902 },   -- Searing Rank 2
+	{ Element.Fire, 6364, 0, 3903 },   -- Searing Rank 3
+	{ Element.Fire, 6365, 0, 3904 },   -- Searing Rank 4
+	{ Element.Fire, 10437, 0, 7400 },  -- Searing Rank 5
+	{ Element.Fire, 10438, 0, 7402 },  -- Searing Rank 6
+	{ Element.Fire, 25533, 0, 15480 }, -- Searing Rank 7
 
 	{ Element.Earth, 5730, 0, 3579 },   -- Stoneclaw Rank 1
 	{ Element.Earth, 6390, 0, 3911 },   -- Stoneclaw Rank 2

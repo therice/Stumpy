@@ -54,7 +54,7 @@ function lib:GetAuraBySpellId(spellId)
 end
 
 function lib:AffectsAnyUnitBySpellId(spellId)
-	Logging:Debug("AffectsAnyUnitBySpellId(%d)", tonumber(spellId))
+	Logging:Trace("AffectsAnyUnitBySpellId(%d)", tonumber(spellId))
 	return GetByIndex(
 		self.Indices.BySpellId,
 		spellId,
@@ -67,5 +67,13 @@ function lib:AffectsUnitBySpellId(spellId, class)
 		self.Indices.BySpellId,
 		spellId,
 		function(t) return t:IsApplicableTo(class) end
+	)
+end
+
+function lib:GetPulseBySpellId(spellId)
+	return GetByIndex(
+		self.Indices.BySpellId,
+		spellId,
+		function(t) return t:GetPulse() end
 	)
 end

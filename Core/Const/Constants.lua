@@ -106,6 +106,7 @@ AddOn.Constants = {
     },
 
     Messages = {
+        ConfigChanged         = name .. "_ConfigChanged",
         Enabled               = name .. "_Enabled",
         EnterCombat           = name .. "_EnterCombat",
         ExitCombat            = name .. "_ExitCombat",

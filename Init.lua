@@ -1,4 +1,5 @@
 local AceAddon, AceAddonMinor = LibStub('AceAddon-3.0')
+--- @type AddOn
 local AddOnName, AddOn = ...
 
 --- @class AddOn
@@ -76,7 +77,7 @@ local function SetDbValue(self, db, i, v)
     Logging:Debug("SetDbValue(%s, %s, %s, %s)", self:GetName(), tostring(db), tostring(path), Util.Objects.ToString(v))
     Util.Tables.Set(db, path, v)
     if self['GenerateConfigChangedEvents'] and self:GenerateConfigChangedEvents() then
-        AddOn:ConfigChanged(self:GetName(), path)
+        AddOn:ConfigChanged(self:GetName(), path, v)
     end
 end
 

@@ -39,15 +39,23 @@ local function ElementFromTotem(totem)
 end
 
 --- @param totem Models.Totem.Totem|string|number
+function TotemTimer:IsTotemPresent(totem)
+	Logging:Debug("IsTotemPresent(%s) : %s", self.name, tostring(totem))
+	return self.totems[ElementFromTotem(totem)]
+end
+
+--- @param totem Models.Totem.Totem|string|number
 function TotemTimer:AddTotem(totem)
+	Logging:Trace("AddTotem(%s) : %s", self.name, tostring(totem))
 	self.totems[ElementFromTotem(totem)] = true
-	if not self:IsRunning() then
+	if not self:IsRunning() and self:GetTotemCount() > 0 then
 		self:Start()
 	end
 end
 
 --- @param totem Models.Totem.Totem|string|number
 function TotemTimer:RemoveTotem(totem)
+	Logging:Trace("RemoveTotem(%s)", tostring(totem))
 	self.totems[ElementFromTotem(totem)] = false
 	if self:IsRunning() and self:GetTotemCount() == 0 then
 		self:Cancel()
@@ -81,6 +89,7 @@ end
 
 function TotemTimer:Start()
 	if not self.timer then
+		Logging:Debug("Start()")
 		AddOn.Timer.After(
 			0,
 			function()
@@ -95,7 +104,7 @@ function TotemTimer:__tostring()
 	return format("TotemTimer(%s)", self.name)
 end
 
-local TestTimer = TotemTimer("LogTotem", function(totem) Logging:Debug("LogTotem(%s)", tostring(totem)) end, 2)
+--local TestTimer = TotemTimer("LogTotem", function(totem) Logging:Debug("LogTotem(%s)", tostring(totem)) end, 2)
 
 --- @class Models.Totem.TotemTimers
 local TotemTimers = AddOn.Instance(
@@ -141,6 +150,17 @@ function TotemTimers:AddTimer(timer)
 	self.timers[timer.name] = timer
 end
 
+function TotemTimers:IsTotemScheduled(timer, totem)
+	if not timer or not timer then return false end
+
+	--- @type Models.Totem.TotemTimer
+	timer = self.timers[Util.Objects.IsInstanceOf(timer, TotemTimer) and timer.name or timer]
+	if timer then
+		return timer:IsTotemPresent(totem)
+	end
+
+	return false
+end
 
 --[[
 --- @param timer Models.Totem.TotemTimer|string
@@ -156,12 +176,5 @@ function TotemTimers:RemoveTimer(timer)
 	end
 
 	self.timers[name] = nil
-end
---]]
-
---[[
-do
-	-- setup standard timers
-	TotemTimers:AddTimer(TestTimer)
 end
 --]]

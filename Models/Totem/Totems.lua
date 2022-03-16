@@ -34,6 +34,18 @@ local GetTotemInfo = GetTotemInfo
 local TotemTimers = AddOn.RequireOnUse('Models.Totem.TotemTimers')
 --- @class Models.Totem.Totem
 local Totem = AddOn.Package('Models.Totem'):Class('Totem')
+--- forward declaration of constant for schedule which updates affected units
+--- @type string
+local AffectedUnitTimerName
+
+--- forward declare functions for initialization
+local SetFields,  PostInitialize
+
+--- @param element number
+function Totem:initialize(element, ...)
+	self.element = element
+	SetFields(self, ...)
+end
 
 -- https://wowpedia.fandom.com/wiki/API_GetTotemInfo
 --      haveTotem, totemName, startTime, duration, icon
@@ -41,20 +53,8 @@ local Totem = AddOn.Package('Models.Totem'):Class('Totem')
 -- These are in the order expected from arguments to the events listed above
 --
 local TotemFields = {'present', 'name', 'startTime', 'duration', 'icon'}
-
---- @param self Models.Totem.Totem
-local function PostInitialize(self)
-	if self:IsPresent() then
-		self.position = Util.Optional.of({HBD:GetPlayerWorldPosition()})
-		TotemTimers():AddTotem(nil, self)
-	else
-		self.position = Util.Optional.empty()
-		TotemTimers():RemoveTotem(nil, self)
-	end
-end
-
 --- @param self  Models.Totem.Totem
-local function SetFields(self, ...)
+SetFields = function(self, ...)
 	Logging:Trace("SetFields(%d) : %s", self.element, Util.Objects.ToString({...}))
 	local t = Util.Tables.Temp(...)
 	for index, field in pairs(TotemFields) do
@@ -65,12 +65,18 @@ local function SetFields(self, ...)
 	PostInitialize(self)
 end
 
---- @param element number
-function Totem:initialize(element, ...)
-	self.element = element
-	SetFields(self, ...)
+--- @param self Models.Totem.Totem
+PostInitialize = function(self)
+	if self:IsPresent() then
+		self.position = Util.Optional.of({HBD:GetPlayerWorldPosition()})
+		self.affected = Util.Optional.empty()
+		TotemTimers():AddTotem(nil, self)
+	else
+		self.position = Util.Optional.empty()
+		self.affected = Util.Optional.empty()
+		TotemTimers():RemoveTotem(nil, self)
+	end
 end
-
 
 function Totem:GetStartTime()
 	return self.startTime
@@ -97,9 +103,20 @@ function Totem:GetPosition()
 	return self.position
 end
 
+--- @return Optional
+function Totem:GetAffected()
+	return self.affected
+end
+
+function Totem:GetPulse()
+	local spell = self:GetSpell()
+	return spell and LibTotem:GetPulseBySpellId(spell:GetId()) or 0
+end
+
 function Totem:IsRankPresent()
 	if not Util.Strings.IsEmpty(self.name) then
 		local parts = Util.Strings.Split(self.name, ' ')
+		Logging:Trace("IsRankPresent() : %s", Util.Objects.ToString(parts))
 		return Util.Numbers.IsRoman(parts[#parts])
 	end
 
@@ -114,6 +131,11 @@ function Totem:GetRank()
 			local roman = parts[#parts]
 			Logging:Trace("GetRank(%s)", tostring(roman))
 			return Util.Numbers.DecodeRoman(roman)
+		--[[
+		else
+			-- todo : dubious
+			return 1
+		--]]
 		end
 	end
 
@@ -154,62 +176,12 @@ end
 function Totem:GetSpell()
 	-- could use LibTotem, but this is dynamic
 	local name, rank = self:GetNormalizedName(), self:GetRank()
-	Logging:Debug("GetSpell(%s, %d)", tostring(name), tonumber(rank))
+	Logging:Trace("GetSpell(%s, %d)", tostring(name), tonumber(rank))
 	return Spells():GetByNameAndRank(name, rank)
 end
 
-local function IsUnitAffectedBySpell(unitId, spellId)
-	local affected = false
-
-	if spellId > 0 then
-		local name, unitSpellId
-
-		for index = 1, 40 do
-			local result = { UnitBuff(unitId, index) }
-			if Util.Objects.IsTable(result) and Util.Tables.Count(result) > 0 then
-				name, unitSpellId = result[1], result[10]
-			else
-				break
-			end
-
-			unitSpellId = tonumber(unitSpellId)
-			Logging:Debug("IsUnitAffectedBySpell(%s, %d) : %s, %d [candidate]", unitId, spellId, tostring(name), unitSpellId)
-			if spellId == unitSpellId then
-				affected = true
-				break
-			end
-		end
-	end
-
-	return affected
-end
-
---- @return number|nil
-function Totem:GetUnitAffectedCount()
-	-- the aura is only for looking for a specific spell when relevant
-	-- it could probably just be dropped entirely and do checks based upon class and range
-	local aura = self:GetAura()
-	if aura and aura:isPresent() then
-		Logging:Debug("GetUnitAffectedCount(%d) : %s", self.element, tostring(aura))
-
-		-- based upon totemic mastery, range is either 20 or 30 yards
-		local count, range = 0, 30 -- Util.Objects.Check(AddOn.player.talents[C.TalentSpells.TotemicMastery], 30, 20)
-
-		for unit in AddOn:GroupIterator(false, true) do
-			Logging:Debug("GetInRangePlayerCount(%s)", unit)
-
-			local affected = IsUnitAffectedBySpell(unit, aura:get())
-			Logging:Debug("GetInRangePlayerCount(%s, %d) : %s", unit, aura:get(), tostring(affected))
-
-			if affected and AddOn:CheckRange(unit, range, "<=") then
-				count = count + 1
-			end
-		end
-
-		return count
-	end
-
-	return 0
+function Totem:IsAffectedUnitUpdateScheduled()
+	return TotemTimers():IsTotemScheduled(AffectedUnitTimerName, self)
 end
 
 function Totem:__tostring()
@@ -369,18 +341,28 @@ TotemSet.static:AddTriggers("name", "default", "totems")
 
 local Version = SemanticVersion(1, 0, 0)
 
-function TotemSet:initialize(id, name)
+function TotemSet:initialize(id, name, icon)
 	Versioned.initialize(self, Version)
 	---@type string
 	self.id = id
 	---@type string
 	self.name = name
+	--- @type number
+	self.icon = icon or 0
 	---@type table<number, table<number>>
 	self.totems = {}
 
 	for element = 1, LibTotem.Constants.MaxTotems do
 		self.totems[element] = {}
 	end
+end
+
+function TotemSet:SetIcon(icon)
+	self.icon = tonumber(icon)
+end
+
+function TotemSet:GetIcon()
+	return self.icon
 end
 
 function TotemSet:SetOrder(element, order)
@@ -402,17 +384,17 @@ end
 function TotemSet:Get(element)
 	local data = self.totems[element]
 
-	local order, spell = nil, nil
+	local order, spellId, spell = nil, nil, nil
 
 	if not Util.Objects.IsEmpty(data) then
-		order, spell = unpack(data)
+		order, spellId = unpack(data)
 
-		Logging:Trace("Get(%d) : %d (order) %d (spell)", element, tostring(order),  Util.Objects.Default(spell, -1))
-		if spell then
-			spell = Spells():GetById(spell)
+		Logging:Trace("Get(%d) : %d (order) %d (spell)", element, tostring(order),  Util.Objects.Default(spellId, -1))
+		if spellId then
+			spell = Spells():GetById(spellId)
 		end
 
-		Logging:Trace("Get(%d) : %d (spell) => %s", element, Util.Objects.Default(spell, -1), Util.Objects.ToString(spell and spell:toTable() or {}))
+		Logging:Trace("Get(%d) : %d (spell) => %s", element, Util.Objects.Default(spellId, -1), Util.Objects.ToString(spell and spell:toTable() or {}))
 	end
 
 	return order, spell
@@ -438,22 +420,23 @@ local Player = AddOn.Package('Models').Player
 --- this timer is responsible for periodic updating of present totems (where applicable) with affected unit count
 --- @class Models.Totem.AffectedUnitTimer
 local AffectedUnitTimer = AddOn.Package('Models.Totem'):Class('AffectedUnitTimer', TotemTimer)
+AffectedUnitTimerName = "AffectedUnitTimer"
+
 function AffectedUnitTimer:initialize()
 	-- todo : update this less frequently
-	TotemTimer.initialize(self, "AffectedUnitTimer", function(...) self:_Evaluate(...) end, 1)
+	TotemTimer.initialize(self, AffectedUnitTimerName, function(...) self:_Evaluate(...) end, 1)
 end
 
 --- @param totem Models.Totem.Totem
 function AffectedUnitTimer:AddTotem(totem)
 	local spell = totem:GetSpell()
-
-	Logging:Warn("AddTotem(%s, %s)", tostring(totem), tostring(spell))
+	Logging:Debug("AddTotem(%s, %s)", tostring(totem), tostring(spell))
 	-- override logic to only add totems where unit count is relevant
 	-- will only be called if totem is present and it affects (any) possible units
 	if spell and LibTotem:AffectsAnyUnitBySpellId(spell:GetId()) then
 		AffectedUnitTimer.super.AddTotem(self, totem)
 	else
-		Logging:Warn("AddTotem(%s) : NOT adding", tostring(totem))
+		Logging:Info("AddTotem(%s) : NOT adding", tostring(totem))
 	end
 end
 
@@ -462,16 +445,16 @@ function AffectedUnitTimer:_Evaluate(totem)
 	local candidates, affected = 0, 0
 
 	local spell, aura = totem:GetSpell(), totem:GetAura()
-	Logging:Debug("_Evaluate(%s, %s)", tostring(totem), tostring(aura))
+	Logging:Trace("_Evaluate(%s, %s)", tostring(totem), tostring(aura))
 	for unit in AddOn:GroupIterator(false, true) do
 		local player = Player:Get(unit)
-		Logging:Debug("_Evaluate(%s, %s) :  %s", tostring(totem), unit, tostring(player))
+		Logging:Trace("_Evaluate(%s, %s) :  %s", tostring(totem), unit, tostring(player))
 		if player then
 			-- is the player a candidate for being affected by the totem's spell (based upon class)
 			local isCandidate = LibTotem:AffectsUnitBySpellId(spell:GetId(), player:GetClassId())
 			-- now check where the unit is eligible based upon it's state (connected, alive, etc.)
 			local isEligible = AddOn.UnitIsEligibleForBuff(unit)
-			Logging:Debug(
+			Logging:Trace(
 				"_Evaluate(%s, %s) : %s (is candidate) %s (is eligible)",
 	              tostring(totem), unit, tostring(isCandidate), tostring(isEligible)
 			)
@@ -491,14 +474,14 @@ function AffectedUnitTimer:_Evaluate(totem)
 							local unitX, unitY, zone = HBD:GetUnitWorldPosition(unit)
 							if unitX and unitY then
 								local totemX, totemY = unpack(position)
-								Logging:Debug(
+								Logging:Trace(
 									"_Evaluate(%s, %s) : %d, %d (totem) %d, %d (player) %d (range)",
 									tostring(totem), unit,
 									tonumber(totemX), tonumber(totemY), tonumber(unitX), tonumber(unitY),
 									tonumber(range)
 								)
 								local distance = HBD:GetWorldDistance(zone, totemX, totemY, unitX, unitY)
-								Logging:Debug( "_Evaluate(%s, %s) : %.2f (distance)", tostring(totem), unit, tonumber(distance))
+								Logging:Trace( "_Evaluate(%s, %s) : %.2f (distance)", tostring(totem), unit, tonumber(distance))
 
 								if distance and distance <= range then
 									affected = affected + 1
@@ -511,11 +494,12 @@ function AffectedUnitTimer:_Evaluate(totem)
 		end
 	end
 
-	Logging:Debug("_Evaluate(%s, %s) : %d (candidates) %d (affected)", tostring(totem), tostring(aura), candidates, affected)
+	Logging:Trace("_Evaluate(%s, %s) : %d (candidates) %d (affected)", tostring(totem), tostring(aura), candidates, affected)
+	totem.affected = Util.Optional.of({affected, candidates})
 end
 
 AddDefaultTotemTimers = function()
-	Logging:Debug("AddDefaultTotemTimers()")
+	Logging:Trace("AddDefaultTotemTimers()")
 	TotemTimers():AddTimer(AffectedUnitTimer())
 end
 
@@ -529,7 +513,7 @@ do
 		[LTC.Element.Air]   = 8512, -- Windfury Totem
 	}
 
-	local Default = TotemSet('621E37A4-3F2A-49D4-C145-EDF8D5D965B8', 'Stumpy Default Totem Set')
+	local Default = TotemSet('621E37A4-3F2A-49D4-C145-EDF8D5D965B8', 'Stumpy Default Totem Set', 136008)
 
 	for element, spellId in pairs(DefaultSpellIdsByElement) do
 		Default:Set(element, element, spellId)

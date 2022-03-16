@@ -26,7 +26,7 @@ Toolbox.defaults = {
 		-- these are settings for the main totem bar (always visible)
 		toolbox = {
 			size      = 50,
-			spacing   = 8,
+			spacing   = 3,
 			grow      = C.Direction.Horizontal,
 		},
 		-- these are settings for the flyout bar (only visible when swapping totems)
@@ -34,6 +34,16 @@ Toolbox.defaults = {
 			size      = 35,
 			spacing   = 5,
 			layout    = C.Layout.Grid,
+		},
+		-- these are settings for the set bar (only visible when swapping sets)
+		set = {
+			size      = 35,
+			spacing   = 5,
+			layout    = C.Layout.Grid,
+		},
+		-- this is for the pulse timer and size is either width or height, based upon toolbox grow1
+		pulse = {
+			size    = 15
 		},
 		activeSet = TotemSet.Default.id,
 		sets      = {
@@ -63,22 +73,6 @@ function Toolbox:OnEnable()
 	Logging:Debug("OnEnable(%s)", self:GetName())
 	self:AddDefaultTotemSet()
 	self:RegisterCallbacks()
-
-	--[[
-	self:ScheduleRepeatingTimer(function()
-		for index = 1, 40 do
-			local result = {
-				UnitBuff(C.player, index)
-			}
-
-			if Util.Objects.IsTable(result) and Util.Tables.Count(result) > 0 then
-				Logging:Debug("Buffs(%d) => %s", index, Util.Objects.ToString(result))
-			else
-				break
-			end
-		end
-	end, 2)
-	--]]
 end
 
 function Toolbox:OnDisable()
@@ -105,7 +99,8 @@ function Toolbox:RegisterCallbacks()
 
 	self.subscriptions = Message():BulkSubscribe({
          [C.Messages.EnterCombat] = function(...) self:OnEnterCombat(...) end,
-         [C.Messages.ExitCombat] = function(...) self:OnExitCombat(...) end
+         [C.Messages.ExitCombat] = function(...) self:OnExitCombat(...) end,
+         [C.Messages.ConfigChanged] = function(...)  self:OnConfigChanged(...) end,
      })
 
 	Totems():RegisterCallbacks(self, {
@@ -142,7 +137,7 @@ function Toolbox:GetTotemSet()
 			local sets = self.totemSet:GetAll()
 			if not Util.Objects.IsNil(sets) and Util.Tables.Count(sets) > 0 then
 				self.totemSet = Util.Tables.First(sets)
-				self:SetDbValue(self.db.profile, 'activeSet', self.totemSet.id)
+				self:SetActiveTotemSet(self.totemSet.id)
 			end
 		end
 
@@ -152,6 +147,25 @@ function Toolbox:GetTotemSet()
 	end
 
 	return self.totemSet
+end
+
+function Toolbox:SetActiveTotemSet(id, sendMessage)
+	sendMessage = Util.Objects.Default(sendMessage)
+	if Util.Strings.IsSet(id) then
+		local _GenerateConfigChangedEvents = self.GenerateConfigChangedEvents
+		Util.Functions.try(
+			function()
+				self.GenerateConfigChangedEvents = function() return sendMessage end
+				self:SetDbValue(self.db.profile, 'activeSet', id)
+			end
+		).finally(
+			function()
+				if _GenerateConfigChangedEvents then
+					self.GenerateConfigChangedEvents = _GenerateConfigChangedEvents
+				end
+			end
+		)
+	end
 end
 
 function Toolbox:ShouldEnqueueEvent()
@@ -235,10 +249,34 @@ function Toolbox:OnTotemSetDaoEvent(event, eventDetail)
 	local extra = unpack(eventDetail.extra)
 	if Util.Objects.IsTable(extra) and Util.Objects.IsNumber(extra.element) and Util.Objects.IsSet(extra.spell) then
 		self.totemBar:GetButtonByElement(extra.element):OnSpellSelected(extra.spell)
+	-- emulated DOA event via OnConfigChanged(), only as a result of active set id being changed
+	elseif Util.Objects.IsTable(extra) and Util.Objects.IsString(extra.setId) then
+		--- @type Models.Totem.TotemSet
+		local set = self.totemSets:Get(extra.setId)
+		if set then
+			-- todo : we have the set, should be able to just use it for order
+			for element, _ in pairs(set.totems) do
+				local _, spell = set:Get(element)
+				self.totemBar:GetButtonByElement(element):OnSpellSelected(spell)
+			end
+		end
 	else
 		Logging:Warn("OnTotemSetDaoEvent() : NOT IMPLEMENTED")
-		--self.frame:UpdateButtons()
 	end
+end
+
+function Toolbox:OnConfigChanged(_, message)
+	Logging:Debug("OnConfigChanged() : %s", Util.Objects.ToString(message))
+	local success, module, path, value = AddOn:Deserialize(message)
+	if success and Util.Strings.Equal(self:GetName(), module) then
+		Logging:Debug("OnConfigChanged() : %s = %s", Util.Objects.ToString(path), Util.Objects.ToString(value))
+		-- the active totem set has changed
+		if Util.Strings.Equal(path, "activeSet") then
+			-- this is a simulated event
+			self:OnTotemSetDaoEvent(Dao.Events.EntityUpdated, { extra = {{setId = value}} })
+		end
+	end
+
 end
 
 function Toolbox:OnEnterCombat()
@@ -295,6 +333,26 @@ end
 
 function Toolbox:GetFlyoutSettings()
 	return self:GetFlyoutButtonSize(), self:GetFlyoutButtonSpacing(), self:GetFlyoutLayout()
+end
+
+function Toolbox:GetSetButtonSize()
+	return Util.Objects.Default(self.db.profile.set.size, 35)
+end
+
+function Toolbox:GetSetButtonSpacing()
+	return Util.Objects.Default(self.db.profile.set.spacing, 5)
+end
+
+function Toolbox:GetSetLayout()
+	return Util.Objects.Default(self.db.profile.set.layout, C.Layout.Grid)
+end
+
+function Toolbox:GetSetSettings()
+	return self:GetSetButtonSize(), self:GetSetButtonSpacing(), self:GetSetLayout()
+end
+
+function Toolbox:GetPulseSize()
+	return Util.Objects.Default(self.db.profile.pulse.size, 15)
 end
 
 function Toolbox:GetElementIndex(element)
