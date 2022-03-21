@@ -33,6 +33,7 @@ local ButtonTexture = {
 	tile = false, tileSize = 8, edgeSize = 2,
 	insets = { left = 2, right = 2, top = 2, bottom = 2 },
 }
+local ButtonBorderColor = C.Colors.Marigold
 
 local function InvalidGrow(grow)
 	error(format("Invalid grow '%s' (%s)", grow, Util.Objects.ToString(Util.Tables.Values(C.Direction))))
@@ -63,7 +64,6 @@ local TotemSetBarButton = AddOn.Class('TotemSetBarButton', FrameContainer)
 --- @class TotemPulseTimer
 local TotemPulseTimer = AddOn.Class('TotemPulseTimer', FrameContainer)
 
-
 -- https://wowpedia.fandom.com/wiki/SecureHandlers
 -- https://wowpedia.fandom.com/wiki/SecureActionButtonTemplate
 
@@ -72,6 +72,7 @@ function TotemBar:initialize()
 	FrameContainer.initialize(self, function() return self:_CreateFrame() end)
 	--- @type table<number, TotemButton>
 	self.buttons = {}
+	--- @type TotemSetButton
 	self.setButton = TotemSetButton(self)
 	self:CreateButtons()
 	self:PositionAndSize()
@@ -93,6 +94,10 @@ function TotemBar:GetButtons()
 	return self.buttons
 end
 
+function TotemBar:GetButton(index)
+	return self.buttons[index]
+end
+
 --- @param element Models.Totem.Totem|number|string
 function TotemBar:GetButtonByElement(element)
 	if Util.Objects.IsInstanceOf(element, Totem) then
@@ -103,8 +108,31 @@ function TotemBar:GetButtonByElement(element)
 		error("Specified element is not of the appropriate type")
 	end
 
-	local index = Toolbox:GetElementIndex(element)
-	return self.buttons[index]
+	local index, _ = Util.Tables.FindFn(
+		self.buttons, function(b) return b.element == element end
+	)
+	--Logging:Debug("GetButtonByElement() : %d (element) => %d (index)", element, index)
+	return self:GetButton(index)
+end
+
+function TotemBar:EnsureButton(element, order)
+	if AddOn:InCombatLockdown() then
+		Logging:Warn("Unable to swap totem button positions while in combat. This is a bug and needs addressed.")
+		return
+	end
+
+	local existing, target = self:GetButtonByElement(element), self:GetButton(order)
+	if existing ~= target then
+		Logging:Debug("EnsureButton(%d, %d) : swapping %d with %d", element, order, existing.element, target.element)
+		Util.Functions.try(
+			function()
+				existing:CapturePoint()
+				self:SwapButtons(existing, target)
+			end
+		).finally(
+			function()  existing:ClearPoint() end
+		)
+	end
 end
 
 function TotemBar:CreateButton(element)
@@ -125,6 +153,25 @@ function TotemBar:UpdateButton(totem)
 	self:GetButtonByElement(totem):Update()
 end
 
+-- example taints if swapping occurs during combat
+--[[
+ An action was blocked in combat because of taint from Stumpy - Stumpy_TotemBar_Totem2:ClearAllPoints()
+     Interface\AddOns\Stumpy\Modules\UI\Toolbox.lua:153 SwapButtons()
+     Interface\AddOns\Stumpy\Modules\UI\Toolbox.lua:534 OnDragStop()
+     Interface\AddOns\Stumpy\Modules\UI\Toolbox.lua:280
+ An action was blocked in combat because of taint from Stumpy - Stumpy_TotemBar_Totem2:SetPoint()
+     Interface\AddOns\Stumpy\Modules\UI\Toolbox.lua:154 SwapButtons()
+     Interface\AddOns\Stumpy\Modules\UI\Toolbox.lua:534 OnDragStop()
+     Interface\AddOns\Stumpy\Modules\UI\Toolbox.lua:280
+ An action was blocked in combat because of taint from Stumpy - Stumpy_TotemBar_Totem1:ClearAllPoints()
+     Interface\AddOns\Stumpy\Modules\UI\Toolbox.lua:156 SwapButtons()
+     Interface\AddOns\Stumpy\Modules\UI\Toolbox.lua:534 OnDragStop()
+     Interface\AddOns\Stumpy\Modules\UI\Toolbox.lua:280
+ An action was blocked in combat because of taint from Stumpy - Stumpy_TotemBar_Totem1:SetPoint()
+     Interface\AddOns\Stumpy\Modules\UI\Toolbox.lua:157 SwapButtons()
+     Interface\AddOns\Stumpy\Modules\UI\Toolbox.lua:534 OnDragStop()
+     Interface\AddOns\Stumpy\Modules\UI\Toolbox.lua:280
+--]]
 --- @param one TotemButton
 --- @param two TotemButton
 function TotemBar:SwapButtons(one, two)
@@ -172,6 +219,36 @@ function TotemBar:PositionAndSize()
 		InvalidGrow(grow)
 	end
 end
+
+--- @param element number
+--- @param spell number
+function TotemBar:OnSpellSelected(element, spell)
+	self:GetButtonByElement(element):OnSpellSelected(spell)
+end
+
+function TotemBar:OnSetActivated(id)
+	--- @type Models.Totem.TotemSet
+	local set = Toolbox.totemSets:Get(id)
+	if not set then return end
+
+	-- if we're in combat lockdown, don't perform the actual
+	-- activation, update display to show it's pending and it will
+	-- be handled after combat exits
+	if AddOn:InCombatLockdown() then
+		self.setButton:SetPending(set)
+	else
+		-- clear the pending marker, we're going to actually activate
+		self.setButton:SetPending(nil)
+
+		local order = 1
+		for element, spell in set:OrderedIterator() do
+			Logging:Debug("Element(%d) => Position (%d) / Spell (%d)", element, order, spell)
+			self:EnsureButton(element, order)
+			order = order + 1
+		end
+	end
+end
+
 -- TotemBar END --
 
 -- TotemButton BEGIN --
@@ -220,7 +297,6 @@ function TotemButton:GetName()
 end
 
 function TotemButton:_CreateFrame()
-	-- local button = CreateFrame('Button', self:GetName(), self.parent:GetFrame(), "BackdropTemplate,SecureHandlerBaseTemplate,SecureActionButtonTemplate")
 	local button = CreateFrame('Button', self:GetName(), self.parent:GetFrame(), "BackdropTemplate,SecureHandlerBaseTemplate,SecureHandlerStateTemplate,SecureActionButtonTemplate")
 	button:SetBackdrop(ButtonTexture)
 	button:SetBackdropColor(0, 0, 0, 1)
@@ -231,14 +307,14 @@ function TotemButton:_CreateFrame()
 	button.icon:SetTexCoord(unpack({0.08, 0.92, 0.08, 0.92}))
 	UI.SetInside(button.icon)
 
-	button.cooldown = CreateFrame('Cooldown', button:GetName() .. '_Cooldown', button, 'CooldownFrameTemplate')
-	button.cooldown:SetReverse(true)
-	button.cooldown:SetFrameLevel(button:GetFrameLevel() + 1)
-	UI.SetInside(button.cooldown)
-
-	button.pending = button:CreateTexture(nil, 'OVERLAY')
+	button.pending = button:CreateTexture(nil, 'ARTWORK')
 	button.pending:SetTexCoord(unpack({0.08, 0.92, 0.08, 0.92}))
 	button.pending:Hide()
+
+	button.cooldown = CreateFrame('Cooldown', button:GetName() .. '_Cooldown', button, 'CooldownFrameTemplate')
+	button.cooldown:SetReverse(true)
+	button.cooldown:SetFrameLevel(button:GetFrameLevel() + 2)
+	UI.SetInside(button.cooldown)
 
 	-- dropped this in favor of putting the affected status on flyout button
 	--[[
@@ -262,9 +338,8 @@ function TotemButton:_CreateFrame()
 	button:RegisterForDrag("LeftButton")
 	button:SetScript("OnDragStart", function() self:OnDragStart() end)
 	button:SetScript("OnDragStop", function() self:OnDragStop() end)
-	button:Show()
-
 	button:SetScript("OnAttributeChanged", function(...) self:OnAttributeChanged(...) end)
+	button:Show()
 
 	return button
 end
@@ -491,10 +566,19 @@ function TotemButton:RestorePosition()
 	self._:SetPoint(self.point[1], self.point[2], self.point[3])
 end
 
+function TotemButton:CapturePoint()
+	local point, _, _, x, y = self._:GetPoint()
+	self.point = {point, x, y}
+end
+
+function TotemButton:ClearPoint()
+	self.point = nil
+end
+
 function TotemButton:OnDragStart()
+	--- cannot reposition existing UI elements during combat, see logging detail above SwapButtons()
 	if not AddOn:InCombatLockdown() and IsShiftKeyDown() then
-		local point, _, _, x, y = self._:GetPoint()
-		self.point = {point, x, y}
+		self:CapturePoint()
 		Logging:Debug("OnDragStart(%d) : %s", self._:GetID(), Util.Objects.ToString(self.point))
 		self._:StartMoving()
 	end
@@ -523,7 +607,7 @@ function TotemButton:OnDragStop()
 		end
 
 		-- nil it out at end as we use it as indicator that frame is being dragged
-		self.point = nil
+		self:ClearPoint()
 	end
 end
 -- TotemBarButton END --
@@ -546,29 +630,13 @@ function TotemFlyoutButton:GetName()
 end
 
 function TotemFlyoutButton:_CreateFrame()
-	-- local button = UI:NewNamed('Button', self.parent:GetFrame(), self:GetName(), nil, "BackdropTemplate,SecureHandlerClickTemplate,SecureHandlerStateTemplate")
-	local button = UI:NewNamed('Button', self.parent:GetFrame(), self:GetName(), nil, "BackdropTemplate,SecureHandlerClickTemplate")
+	local button = UI:NewNamed('Button', self.parent:GetFrame(), self:GetName(), nil, "BackdropTemplate,SecureHandlerStateTemplate,SecureHandlerClickTemplate")
 	button.text:SetFont(TextStatusBarText:GetFont())
 	button.text:SetTextColor(C.Colors.LuminousYellow:GetRGB())
 	button.Texture:SetColorTexture(C.Colors.MageBlue:GetRGB())
 	button.HighlightTexture:SetColorTexture(C.Colors.MageBlue:GetRGB())
 	button.HighlightTexture:SetGradientAlpha("VERTICAL", 0.05, 0.06, 0.09, 1, 0.20, 0.21, 0.25, 1)
 	button:RegisterForClicks("LeftButtonDown")
-
-	--[[
-	button:SetScript(
-		"PreClick",
-		function(b)
-			Logging:Trace("PreClick(%d)", self:GetElement())
-			local flyoutBar = self.parent:GetFlyoutBar()
-			-- only reposition and update when not currently visible
-			if not flyoutBar._:IsVisible() then
-				flyoutBar:Reposition(b)
-				flyoutBar:UpdateButtons()
-			end
-		end
-	)
-	--]]
 
 	-- this is all about showing/hiding flyouts
 	--
@@ -745,9 +813,14 @@ end
 -- TotemFlyoutBar END --
 
 -- TotemFlyoutBarButton START --
+--- @param parent TotemFlyoutBar
+--- @param index number
 function TotemFlyoutBarButton:initialize(parent, index)
+	--- @type TotemFlyoutBar
 	self.parent = parent
+	--- @type number
 	self.index = index
+	--- @type Models.Spell.Spell
 	self.spell = nil
 	FrameContainer.initialize(self, function() return self:_CreateFrame() end)
 end
@@ -767,10 +840,30 @@ function TotemFlyoutBarButton:_CreateFrame()
 	button.icon:SetTexCoord(unpack({0.08, 0.92, 0.08, 0.92}))
 	UI.SetInside(button.icon)
 
+	BaseWidget.Border(button, ButtonBorderColor.r, ButtonBorderColor.g, ButtonBorderColor.b, ButtonBorderColor.a, 1, 1, 1)
+
 	-- any up event is a click
 	button:RegisterForClicks("AnyUp")
 	-- on left click, cast totem for associated spell
 	button:SetAttribute("type", "spell")
+
+	button:SetScript(
+		'OnShow',
+		function()
+			if Util.Objects.IsNil(self.spell) then
+				button:HideBorders()
+				return
+			end
+
+			local _, setSpell = Toolbox:GetTotemSet():Get(self.parent.parent:GetElement())
+			if Util.Objects.IsSet(setSpell) and Util.Objects.Equals(self.spell:GetId(), setSpell:GetId()) then
+				button:ShowBorders()
+			else
+				button:HideBorders()
+			end
+
+		end
+	)
 
 	button:SetScript('OnEnter', function() if self.spell then UIUtil.Link(self._, self.spell.link) end end)
 	button:SetScript('OnLeave', function() if self.spell then UIUtil:HideTooltip() end end)
@@ -798,6 +891,7 @@ function TotemFlyoutBarButton:Hide()
 	TotemFlyoutBarButton.super.Hide(self)
 end
 
+--- @param spell Models.Spell.Spell
 function TotemFlyoutBarButton:SetSpell(spell)
 	Logging:Trace("SetSpell(%d) : %s", self._:GetID(), Util.Objects.ToString(spell and spell:toTable() or 'NONE'))
 	self.spell = spell
@@ -881,7 +975,11 @@ function TotemSetButton:_CreateFrame()
 	button.HighlightTexture:SetColorTexture(C.Colors.Cream:GetRGB())
 	button.HighlightTexture:SetGradientAlpha("VERTICAL", 0.05, 0.06, 0.09, 1, 0.20, 0.21, 0.25, 1)
 	button:RegisterForClicks("LeftButtonDown")
-	button:Show()
+
+	-- for any pending activation of a totem set
+	button.pending = button:CreateTexture(nil, 'ARTWORK')
+	button.pending:SetTexCoord(unpack({0.08, 0.92, 0.08, 0.92}))
+	button.pending:Hide()
 
 	button:SetAttribute("_onclick",[[
 		-- reference to the setBar bound to this button
@@ -896,21 +994,39 @@ function TotemSetButton:_CreateFrame()
 		end
 	]])
 
+	button:Show()
 	return button
 end
 
 function TotemSetButton:PositionAndSize(size, _, grow)
 	self._:ClearAllPoints()
+
+	self._.pending:SetSize(size/2.5, size/2.5)
+	self._.pending:ClearAllPoints()
+
 	if Util.Objects.Equals(grow, C.Direction.Horizontal) then
 		self._:SetSize(size/5, size)
 		self._:SetPoint('RIGHT', self._:GetParent(), 'LEFT', -5, 0)
+		self._.pending:SetPoint("BOTTOM", self._, "TOP", 0, 2)
 	elseif Util.Objects.Equals(grow, C.Direction.Vertical) then
 		self._:SetSize(size, size/5)
 		self._:SetPoint('BOTTOM', self._:GetParent(), 'TOP', 0, 5)
+		self._.pending:SetPoint("LEFT", self._, "RIGHT", 2, 0)
 	else
 		InvalidGrow(grow)
 	end
 end
+
+--- @param set Models.Totem.TotemSet
+function TotemSetButton:SetPending(set)
+	if not set then
+		self._.pending:Hide()
+	else
+		self._.pending:SetTexture(set:GetIcon())
+		self._.pending:Show()
+	end
+end
+
 -- TotemSetButton END --
 
 -- TotemSetBar START --
@@ -938,10 +1054,8 @@ end
 function TotemSetBar:_CreateFrame()
 	local f = CreateFrame('Frame', self:GetName(), self.parent:GetFrame(), "BackdropTemplate,SecureHandlerBaseTemplate,SecureHandlerStateTemplate,SecureHandlerShowHideTemplate")
 	f:SetScript("OnAttributeChanged", function(...) self:OnAttributeChanged(...) end)
-
 	-- set a reference to this frame, by static id, on the TotemSetButton (parent)
 	self.parent._:SetFrameRef("setBar", f)
-
 	return f
 end
 
@@ -1011,7 +1125,6 @@ function TotemSetBar:UpdateButtons()
 		Logging:Debug("UpdateButtons() : %d (sets) %d (buttons)", setCount, buttonCount)
 	end
 
-
 	local setIndex = buttonCount
 	-- this wil be in alphabetical order, so work from greatest index to first
 	for _, set in pairs(sets) do
@@ -1051,7 +1164,7 @@ function TotemSetBarButton:initialize(parent, index)
 	self.parent = parent
 	self.index = index
 	FrameContainer.initialize(self, function() return self:_CreateFrame() end)
-	self.setId = nil
+	self.id = nil
 end
 
 function TotemSetBarButton:GetName()
@@ -1065,10 +1178,23 @@ function TotemSetBarButton:_CreateFrame()
 	button:SetBackdropBorderColor(0, 0, 0, 1)
 	button:SetID(self.index)
 
+	BaseWidget.Border(button, ButtonBorderColor.r, ButtonBorderColor.g, ButtonBorderColor.b, ButtonBorderColor.a, 1, 1, 1)
+
 	button.icon = button:CreateTexture(nil, 'ARTWORK')
 	button.icon:SetTexCoord(unpack({0.08, 0.92, 0.08, 0.92}))
 	UI.SetInside(button.icon)
 
+	button:SetScript(
+		'OnShow',
+		function()
+			--Logging:Debug("OnShow() : %s, %s", tostring(self.id), tostring(Toolbox:GetActiveTotemSetId()))
+			if Util.Strings.Equal(self.id, Toolbox:GetActiveTotemSetId()) then
+				button:ShowBorders()
+			else
+				button:HideBorders()
+			end
+		end
+	)
 	-- tooltip stuff for set name
 	button:SetScript(
 		'OnEnter',
@@ -1124,7 +1250,6 @@ function TotemSetBarButton:PositionAndSize(size, spacing, grow, layout)
 		else
 			InvalidGrow(grow)
 		end
-	-- todo : fix grid layout
 	elseif Util.Objects.Equals(layout, C.Layout.Grid) then
 		-- LUA uses 1 based indexing, not 0 (which we want to use, so subtract 1)
 		local index = self.index -- (SetMaxButtons - self.index)
@@ -1312,7 +1437,6 @@ end
 
 function TotemPulseTimer:PositionAndSize(size, spacing, grow, pulseSize)
 	-- todo : evaluate whether clearing and resetting points is necessary
-
 	self._:ClearAllPoints()
 	self._.bar:ClearAllPoints()
 	self._.bar.bg:ClearAllPoints()
@@ -1342,7 +1466,6 @@ function TotemPulseTimer:PositionAndSize(size, spacing, grow, pulseSize)
 
 		self._.bar.bg:SetAllPoints()
 
-		--self._.bar.time:SetPoint("TOP", self._.bar, "TOP", 0.5, -1)
 		self._.bar.time:SetPoint("RIGHT", self._.bar, "RIGHT", -1, 0.5)
 	else
 		InvalidGrow(grow)
@@ -1372,7 +1495,6 @@ function TotemPulseTimer:Update(remaining)
 		-- set rotation of spark image to be 180 degrees CCW
 		self._.bar.spark:SetTexCoord(0, 0, 1, 0, 0, 1, 1, 1)
 		self._.bar.spark:SetPoint("CENTER", self._.bar, "BOTTOM", 0.5, self._.bar:GetValue() * self._.bar:GetHeight())
-
 	elseif Util.Objects.Equals(grow, C.Direction.Vertical) then
 		-- set rotation of spark image back to normal
 		self._.bar.spark:SetTexCoord(0,1,0,1)
@@ -1410,15 +1532,7 @@ end
 
 function Toolbox:GetFrame()
 	if not self.totemBar then
-		Logging:Trace("GetFrame() : Creating totem bar")
 		local tb = TotemBar()
-
-		--f.totemFlyout = CreateTotemFlyoutBar(f)
-
-		--local tsf = CreateFrame('Frame', AddOn:Qualify('TotemBar', 'TotemSetFlyout'), f, "BackdropTemplate")
-		--f.setFlyout = tsf
-		--f.setFlyout:Hide()
-
 		self.totemBar = tb
 		self.totemBar:Show()
 	end

@@ -38,18 +38,17 @@ function AddOn:OnEnable()
 
 	self.player = AddOn.Player()
 	Logging:Debug("%s", Util.Objects.ToString(self.player:toTable()))
-	--[[
-	if not self.player:IsShaman() then
+
+	if not self.player:IsClass("SHAMAN") then
 		AddOn:Print(
 			format(
 				L["not_usable_by_x"],
-				UIUtil.ClassColorDecorator(self.player.classTag):decorate(self.player.class)
+				UIUtil.ClassColorDecorator(self.player:GetClass()):decorate(self.player:GetClassDisplayName())
 			)
 		)
 		self:Disable()
 		return
 	end
-	--]]
 
 	for name, module in self:IterateModules() do
 		Logging:Debug("OnEnable(%s) : Examining module (startup) '%s'", self:GetName(), name)

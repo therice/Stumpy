@@ -33,7 +33,6 @@ function AddOn.Unsubscribe(subscriptions)
 	end
 end
 
-
 local UnitNames = {}
 
 -- Gets a unit's name formatted with realmName.
@@ -86,7 +85,6 @@ end
 function AddOn.Player()
 	local player = Player:Get("player")
 	if player:IsClass("SHAMAN") then
-
 		local talents = {}
 		for talent, spell in pairs(LibTotem.Constants.Talents.Spell) do
 			talents[spell] = select(5, GetTalentInfo(unpack(LibTotem.Constants.Talents.Talent[talent]))) == 1 and true or false

@@ -133,7 +133,7 @@ function Totem:GetRank()
 			return Util.Numbers.DecodeRoman(roman)
 		--[[
 		else
-			-- todo : dubious
+			-- todo : dubious, very dubious
 			return 1
 		--]]
 		end
@@ -400,6 +400,33 @@ function TotemSet:Get(element)
 	return order, spell
 end
 
+--- this will yield a function which provides element to spell mappings, in the order specified by set
+---
+--- @return function
+function TotemSet:OrderedIterator()
+	local ordering =
+		Util(self.totems):Copy()
+			:Map(function(attrs) return attrs[1] end)
+			:Flip()()
+
+
+	--Logging:Debug("Iterator() : %s", Util.Objects.ToString(ordering))
+
+	local index, element = 0
+
+	return function()
+		index = index + 1
+
+		if index >  LibTotem.Constants.MaxTotems then
+			return nil
+		end
+
+		element = ordering[index]
+		Logging:Debug("OrderedIterator(%d) : %d", index, element)
+		return element, self.totems[element][2]
+	end
+end
+
 function TotemSet.CreateInstance(...)
 	local uuid, name = UUID.UUID(), format("%s (%s)", L["totem_set"], DateFormat.Full:format(Date()))
 	return Set(uuid, name)
@@ -415,7 +442,6 @@ end
 local TotemTimer =  AddOn.Package('Models.Totem').TotemTimer
 --- @type Models.Player
 local Player = AddOn.Package('Models').Player
-
 
 --- this timer is responsible for periodic updating of present totems (where applicable) with affected unit count
 --- @class Models.Totem.AffectedUnitTimer

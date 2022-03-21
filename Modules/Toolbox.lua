@@ -63,6 +63,11 @@ function Toolbox:OnInitialize()
 	self.totemSets = TotemSetDao(self, self.db.profile.sets)
 	--- @type Models.Totem.TotemSet
 	self.totemSet = nil
+	-- when an attempt is made to activate a totem set, but we're unable to (i.e. combat) keep
+	-- a reference so it can be handled once combat is done
+	--- @type Optional
+	self.pendingTotemSet = Util.Optional.empty()
+	-- queue of totem events that couldn't be processed as they arrived
 	self.eventQueue = {
 		events    = {},
 		timer     = nil,
@@ -80,6 +85,7 @@ function Toolbox:OnDisable()
 	self:UnregisterCallbacks()
 end
 
+-- todo : upgrade from default spells to highest rank
 function Toolbox:AddDefaultTotemSet()
 	local default = self.totemSets:Get(TotemSet.Default.id)
 	if Util.Objects.IsNil(default) then
@@ -150,22 +156,38 @@ function Toolbox:GetTotemSet()
 end
 
 function Toolbox:SetActiveTotemSet(id, sendMessage)
-	sendMessage = Util.Objects.Default(sendMessage)
-	if Util.Strings.IsSet(id) then
-		local _GenerateConfigChangedEvents = self.GenerateConfigChangedEvents
-		Util.Functions.try(
-			function()
-				self.GenerateConfigChangedEvents = function() return sendMessage end
-				self:SetDbValue(self.db.profile, 'activeSet', id)
-			end
-		).finally(
-			function()
-				if _GenerateConfigChangedEvents then
-					self.GenerateConfigChangedEvents = _GenerateConfigChangedEvents
-				end
-			end
-		)
+	if not Util.Strings.IsSet(id) then
+		Logging:Warn("Cannot activate totem set, as no id was provided")
+		return
 	end
+
+	-- if we have an existing totem set, but the one we're activating is different, then nil it out
+	if not Util.Objects.IsNil(self.totemSet) and not Util.Strings.Equal(self.totemSet.id, id) then
+		self.totemSet = nil
+	end
+
+	-- based upon whether we are in combat, either capture the id to activate OR
+	-- clear it out
+	if AddOn:InCombatLockdown() then
+		self.pendingTotemSet = Util.Optional.of({id, sendMessage})
+	else
+		self.pendingTotemSet = Util.Optional.empty()
+	end
+
+	sendMessage = Util.Objects.Default(sendMessage)
+	local _GenerateConfigChangedEvents = self.GenerateConfigChangedEvents
+	Util.Functions.try(
+		function()
+			self.GenerateConfigChangedEvents = function() return sendMessage end
+			self:SetDbValue(self.db.profile, 'activeSet', id)
+		end
+	).finally(
+		function()
+			if _GenerateConfigChangedEvents then
+				self.GenerateConfigChangedEvents = _GenerateConfigChangedEvents
+			end
+		end
+	)
 end
 
 function Toolbox:ShouldEnqueueEvent()
@@ -248,18 +270,10 @@ function Toolbox:OnTotemSetDaoEvent(event, eventDetail)
 	-- there may be extra detail on the event which designates what totem bar button to update
 	local extra = unpack(eventDetail.extra)
 	if Util.Objects.IsTable(extra) and Util.Objects.IsNumber(extra.element) and Util.Objects.IsSet(extra.spell) then
-		self.totemBar:GetButtonByElement(extra.element):OnSpellSelected(extra.spell)
+		self.totemBar:OnSpellSelected(extra.element, extra.spell)
 	-- emulated DOA event via OnConfigChanged(), only as a result of active set id being changed
 	elseif Util.Objects.IsTable(extra) and Util.Objects.IsString(extra.setId) then
-		--- @type Models.Totem.TotemSet
-		local set = self.totemSets:Get(extra.setId)
-		if set then
-			-- todo : we have the set, should be able to just use it for order
-			for element, _ in pairs(set.totems) do
-				local _, spell = set:Get(element)
-				self.totemBar:GetButtonByElement(element):OnSpellSelected(spell)
-			end
-		end
+		self.totemBar:OnSetActivated(extra.setId)
 	else
 		Logging:Warn("OnTotemSetDaoEvent() : NOT IMPLEMENTED")
 	end
@@ -270,9 +284,10 @@ function Toolbox:OnConfigChanged(_, message)
 	local success, module, path, value = AddOn:Deserialize(message)
 	if success and Util.Strings.Equal(self:GetName(), module) then
 		Logging:Debug("OnConfigChanged() : %s = %s", Util.Objects.ToString(path), Util.Objects.ToString(value))
+		-- todo : validate any other paths which would generate this to make sure properly handled
 		-- the active totem set has changed
 		if Util.Strings.Equal(path, "activeSet") then
-			-- this is a simulated event
+			-- this is a simulated event, where we specify the set id which was activated
 			self:OnTotemSetDaoEvent(Dao.Events.EntityUpdated, { extra = {{setId = value}} })
 		end
 	end
@@ -289,6 +304,11 @@ function Toolbox:OnExitCombat()
 	Logging:Debug("OnExitCombat()")
 	-- don't care about event if the totem bar isn't visible
 	if not self.totemBar then return end
+
+	if self.pendingTotemSet:isPresent() then
+		local id, sendMessage = unpack(self.pendingTotemSet:get())
+		self:SetActiveTotemSet(id, sendMessage)
+	end
 
 	for _, button in pairs(self.totemBar:GetButtons()) do
 		if button:HasPendingChange() then
@@ -361,7 +381,7 @@ function Toolbox:GetElementIndex(element)
 	if set then
 		index, _ = set:Get(element)
 	end
-	return Util.Objects.Default(index, 0) > 0 and index or element -- Util.Tables.Find(self.db.profile.order, element)
+	return Util.Objects.Default(index, 0) > 0 and index or element
 end
 
 function Toolbox:SetElementIndices()

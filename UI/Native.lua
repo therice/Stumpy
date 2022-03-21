@@ -181,6 +181,13 @@ function Widget.Border(self, cR, cG, cB, cA, size, offsetX, offsetY)
         self.BorderBottom:Show()
         self.BorderRight:Show()
     end
+
+    self.SetBorderColor = function(self, cR, cG, cB, cA)
+        self.BorderTop:SetColorTexture(cR, cG, cB, cA)
+        self.BorderLeft:SetColorTexture(cR, cG, cB, cA)
+        self.BorderBottom:SetColorTexture(cR, cG, cB, cA)
+        self.BorderRight:SetColorTexture(cR, cG, cB, cA)
+    end
 end
 
 function Widget.LayerBorder(parent, size, cR, cG, cB, cA, outside, layer)
@@ -245,6 +252,7 @@ function Widget.LayerBorder(parent, size, cR, cG, cB, cA, outside, layer)
     bottom:Show()
     left:Show()
     right:Show()
+
 
     parent.SetBorderColor = function(self, cR, cG, cB, cA, layer)
         layer = Util.Objects.Default(layer, "")
