@@ -115,7 +115,7 @@ function TotemBar:GetButtonByElement(element)
 	return self:GetButton(index)
 end
 
-function TotemBar:EnsureButton(element, order)
+function TotemBar:EnsureButton(element, spell, order)
 	if AddOn:InCombatLockdown() then
 		Logging:Warn("Unable to swap totem button positions while in combat. This is a bug and needs addressed.")
 		return
@@ -123,15 +123,24 @@ function TotemBar:EnsureButton(element, order)
 
 	local existing, target = self:GetButtonByElement(element), self:GetButton(order)
 	if existing ~= target then
-		Logging:Debug("EnsureButton(%d, %d) : swapping %d with %d", element, order, existing.element, target.element)
+		Logging:Debug("EnsureButton(%d [element], %d [order]) : swapping %d with %d", element, order, existing.element, target.element)
 		Util.Functions.try(
 			function()
 				existing:CapturePoint()
 				self:SwapButtons(existing, target)
 			end
 		).finally(
-			function()  existing:ClearPoint() end
+			function() existing:ClearPoint() end
 		)
+	end
+
+	local currentSpell = existing:GetSpell()
+	Logging:Debug(
+		"EnsureButton() : %d (element) %s (current spell) %s (new spell)",
+		target.element, tostring(currentSpell), tostring(spell)
+	)
+	if not currentSpell or not Util.Objects.Equals(currentSpell.id, spell.id) then
+		existing:OnSpellSelected(spell)
 	end
 end
 
@@ -210,11 +219,11 @@ function TotemBar:PositionAndSize()
 	end
 
 	if Util.Objects.Equals(grow, C.Direction.Horizontal) then
-		self._:Width((size * buttonCount) + (spacing * buttonCount) + (pulseSize * buttonCount) + spacing)
-		self._:Height(size + spacing * 2)
+		self._:SetWidth((size * buttonCount) + (spacing * buttonCount) + (pulseSize * buttonCount) + spacing)
+		self._:SetHeight(size + spacing * 2)
 	elseif Util.Objects.Equals(grow, C.Direction.Vertical) then
-		self._:Height((size * buttonCount) + (spacing * buttonCount)  + (pulseSize * buttonCount) + spacing)
-		self._:Width(size + spacing * 2)
+		self._:SetHeight((size * buttonCount) + (spacing * buttonCount)  + (pulseSize * buttonCount) + spacing)
+		self._:SetWidth(size + spacing * 2)
 	else
 		InvalidGrow(grow)
 	end
@@ -243,7 +252,7 @@ function TotemBar:OnSetActivated(id)
 		local order = 1
 		for element, spell in set:OrderedIterator() do
 			Logging:Debug("Element(%d) => Position (%d) / Spell (%d)", element, order, spell)
-			self:EnsureButton(element, order)
+			self:EnsureButton(element,  Spells():GetById(spell) , order)
 			order = order + 1
 		end
 	end
@@ -294,6 +303,30 @@ end
 --- @return string
 function TotemButton:GetName()
 	return Util.Strings.Join('_', self.parent:GetFrameName(), 'Totem' .. tostring(self.element))
+end
+
+function TotemButton:GetSpellId()
+	local spellId = self._:GetAttribute("spell")
+	return spellId and tonumber(spellId) or nil
+end
+
+function TotemButton:GetSpell()
+	local spellId = self:GetSpellId()
+	if spellId then
+		return Spells():GetById(spellId)
+	end
+
+	return nil
+end
+
+--- @return string
+function TotemButton:GetSpellName()
+	local spell = self:GetSpell()
+	if spell then
+		return spell:GetName()
+	end
+
+	return nil
 end
 
 function TotemButton:_CreateFrame()
@@ -364,7 +397,7 @@ function TotemButton:Update()
 		_, spell = Toolbox:GetTotemSet():Get(self.element)
 	end
 
-	Logging:Trace(
+	Logging:Debug(
 		"UpdateButton(%d) : %s (present), %s (in combat) %s (spell)",
 		self.element, tostring(totem:IsPresent()), tostring(inCombat), tostring(spell)
 	)
@@ -373,7 +406,11 @@ function TotemButton:Update()
 	-- result in the callback doing the needful with icon, cooldown, etc
 	if not inCombat then
 		self._:SetAttribute("spell", spell and spell.id or nil)
-		self:SetPending(nil)
+		-- if the totem is present, don't clear the pending spell
+		-- it could be different than current one
+		if not totem:IsPresent() then
+			self:SetPending(nil)
+		end
 	-- cannot modify the 'spell' attribute while in combat, so perform updates directly
 	else
 		self:OnSpellActivated(spell)
@@ -738,15 +775,15 @@ function TotemFlyoutBar:PositionAndSize()
 	local buttonCount = #self.buttons
 
 	if Util.Objects.Equals(layout, C.Layout.Grid) then
-		self._:Height(FlyoutRows * (size + spacing))
-		self._:Width(FlyoutColumns * (size + spacing))
+		self._:SetHeight(FlyoutRows * (size + spacing))
+		self._:SetWidth(FlyoutColumns * (size + spacing))
 	elseif Util.Objects.Equals(layout, C.Layout.Column) then
 		if Util.Objects.Equals(grow, C.Direction.Horizontal) then
-			self._:Height((size * buttonCount) + (spacing * buttonCount) + spacing)
-			self._:Width(size + spacing * 2)
+			self._:SetHeight((size * buttonCount) + (spacing * buttonCount) + spacing)
+			self._:SetWidth(size + spacing * 2)
 		elseif Util.Objects.Equals(grow, C.Direction.Vertical) then
-			self._:Width((size * buttonCount) + (spacing * buttonCount) + spacing)
-			self._:Height(size + spacing * 2)
+			self._:SetWidth((size * buttonCount) + (spacing * buttonCount) + spacing)
+			self._:SetHeight(size + spacing * 2)
 		else
 			InvalidGrow(grow)
 		end
@@ -1071,15 +1108,15 @@ function TotemSetBar:PositionAndSize()
 	local buttonCount = #self.buttons
 
 	if Util.Objects.Equals(layout, C.Layout.Grid) then
-		self._:Height(SetRows * (size + spacing))
-		self._:Width(SetColumns * (size + spacing))
+		self._:SetHeight(SetRows * (size + spacing))
+		self._:SetWidth(SetColumns * (size + spacing))
 	elseif Util.Objects.Equals(layout, C.Layout.Column) then
 		if Util.Objects.Equals(grow, C.Direction.Horizontal) then
-			self._:Width((size * buttonCount) + (spacing * buttonCount) + spacing)
-			self._:Height(size + spacing * 2)
+			self._:SetWidth((size * buttonCount) + (spacing * buttonCount) + spacing)
+			self._:SetHeight(size + spacing * 2)
 		elseif Util.Objects.Equals(grow, C.Direction.Vertical) then
-			self._:Height((size * buttonCount) + (spacing * buttonCount) + spacing)
-			self._:Width(size + spacing * 2)
+			self._:SetHeight((size * buttonCount) + (spacing * buttonCount) + spacing)
+			self._:SetWidth(size + spacing * 2)
 		else
 			InvalidGrow(grow)
 		end
@@ -1267,7 +1304,7 @@ function TotemSetBarButton:PositionAndSize(size, spacing, grow, layout)
 
 		local x = math.floor((column * size) + (column * spacing))
 		local y = math.floor((row * size) + (row * spacing))
-		Logging:Warn(
+		Logging:Debug(
 			"PositionAndSize(%d) : (row=%d, col=%d) (x=%d, y=%d)",
 			self.index, row, column, x, y
 		)
@@ -1537,5 +1574,10 @@ function Toolbox:GetFrame()
 		self.totemBar:Show()
 	end
 
+	return self.totemBar
+end
+
+--- @return TotemBar
+function Toolbox:GetTotemBar()
 	return self.totemBar
 end

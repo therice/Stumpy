@@ -156,6 +156,10 @@ function Toolbox:GetTotemSet()
 end
 
 function Toolbox:SetActiveTotemSet(id, sendMessage)
+	sendMessage = Util.Objects.Default(sendMessage, false)
+
+	Logging:Debug("SetActiveTotemSet() : %s %s (sendMessage)", tostring(id), tostring(sendMessage))
+
 	if not Util.Strings.IsSet(id) then
 		Logging:Warn("Cannot activate totem set, as no id was provided")
 		return
@@ -163,6 +167,7 @@ function Toolbox:SetActiveTotemSet(id, sendMessage)
 
 	-- if we have an existing totem set, but the one we're activating is different, then nil it out
 	if not Util.Objects.IsNil(self.totemSet) and not Util.Strings.Equal(self.totemSet.id, id) then
+		Logging:Debug("SetActiveTotemSet() : new totem set activated, clearing reference")
 		self.totemSet = nil
 	end
 
@@ -174,7 +179,6 @@ function Toolbox:SetActiveTotemSet(id, sendMessage)
 		self.pendingTotemSet = Util.Optional.empty()
 	end
 
-	sendMessage = Util.Objects.Default(sendMessage)
 	local _GenerateConfigChangedEvents = self.GenerateConfigChangedEvents
 	Util.Functions.try(
 		function()

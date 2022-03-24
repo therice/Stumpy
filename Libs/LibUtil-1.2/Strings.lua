@@ -54,6 +54,7 @@ function Self.IfEmpty(str, value)
 
     return str
 end
+
 -- Split string on delimiter
 function Self.Split(str, del)
     local t = Util.Tables.New()
@@ -89,7 +90,6 @@ end
 function Self.LcFirst(str)
     return str:sub(1, 1):lower() .. str:sub(2)
 end
-
 
 function Self.Lower(str)
     return string.lower(str or "")
@@ -155,4 +155,9 @@ end
 
 function Self.RPad(s, l, c)
     return s .. string.rep(c or ' ', l - #s)
+end
+
+function Self.Trim(s)
+    local from = s:match("^%s*()")
+    return from > #s and "" or s:match(".*%S", from)
 end

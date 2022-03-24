@@ -8,11 +8,11 @@ local name, AddOn = ...
 if not AddOn._IsTestContext then AddOn._IsTestContext = function() return false end end
 
 AddOn.Constants = {
-    name   = name,
-    name_c = "|CFF87CEFA" .. name .. "|r",
-    player = "player",
-    raid   = "raid",
-    party  = "party",
+    name       = name,
+    name_c     = "|CFF87CEFA" .. name .. "|r",
+    player     = "player",
+    raid       = "raid",
+    party      = "party",
 
     AuraFilter = {
         Cancelable = "CANCELABLE",
@@ -88,7 +88,8 @@ AddOn.Constants = {
         PlayerRegenEnabled     = "PLAYER_REGEN_ENABLED",
         PlayerTotemUpdate      = "PLAYER_TOTEM_UPDATE",
         SpellsChanged          = "SPELLS_CHANGED",
-        UnitSpellcastSucceeded = "UNIT_SPELLCAST_SUCCEEDED"
+        UnitSpellcastSucceeded = "UNIT_SPELLCAST_SUCCEEDED",
+        UpdateMacros           = "UPDATE_MACROS",
     },
 
     Icons = {
@@ -103,6 +104,12 @@ AddOn.Constants = {
     Layout = {
         Column  = "COLUMN",
         Grid    = "GRID",
+    },
+
+    Macros = {
+        CastByElement = "castbyelement",
+        CastSequence  = "castsequence",
+        Prefix        = "/" .. name:lower() .. "_",
     },
 
     Messages = {

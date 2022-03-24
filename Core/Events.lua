@@ -20,7 +20,7 @@ function AddOn:SubscribeToEvents()
 	if Util.Tables.Count(self.Events) > 0 then
 		local events = {}
 		for event, method in pairs(self.Events) do
-			Logging:Trace("SubscribeToEvents(%s) : %s", self:GetName(), event)
+			Logging:Debug("SubscribeToEvents(%s) : %s", self:GetName(), event)
 			events[event] = function(evt, ...) self[method](self, evt, ...) end
 		end
 		self.eventSubscriptions = Event:BulkSubscribe(events)
@@ -45,15 +45,16 @@ function AddOn:OnPlayerLogin(...)
 
 	local handle
 
-	local function InitalizeTotems()
-		Logging:Debug("InitalizeTotems()")
+	local function After()
+		Logging:Debug("After()")
 		AddOn.Unsubscribe(handle)
 		Totems():Initialize()
+		self:MacroMediator():Update()
 	end
 
 	-- wait for spells to be refreshed before initializing totems
 	handle = Message():BulkSubscribe({
-		[C.Messages.SpellsRefreshComplete] = function(...) InitalizeTotems() end,
+		[C.Messages.SpellsRefreshComplete] = function(...) After() end,
 	})
 
 	Spells():Enable()
@@ -88,4 +89,9 @@ end
 function AddOn:OnExitCombat(...)
 	Logging:Debug("OnExitCombat() : %s", Util.Objects.ToString({...}))
 	self:SendMessage(C.Messages.ExitCombat, ...)
+end
+
+function AddOn:OnUpdateMacros(...)
+	Logging:Debug("OnUpdateMacros() : %s", Util.Objects.ToString({...}))
+	self:MacroMediator():Update()
 end

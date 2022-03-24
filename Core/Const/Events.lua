@@ -7,4 +7,5 @@ AddOn.Events = {
 	[E.PlayerLogin]         = "OnPlayerLogin",
 	[E.PlayerRegenEnabled]  = "OnExitCombat",
 	[E.PlayerRegenDisabled] = "OnEnterCombat",
+	[E.UpdateMacros]        = "OnUpdateMacros",
 }

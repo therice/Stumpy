@@ -45,8 +45,13 @@ function AddOn:CombatEmulationEnabled()
 end
 
 --- @return Toolbox
-function AddOn:ToolboxModule()
-	return self:GetModule("TotemBar")
+function AddOn:Toolbox()
+	return self:GetModule("Toolbox")
+end
+
+--- @return MacroMediator
+function AddOn:MacroMediator()
+	return self:GetModule("MacroMediator")
 end
 
 function AddOn:RegisterChatCommands()

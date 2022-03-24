@@ -28,7 +28,9 @@ function AddOn:OnInitialize()
 	self:RegisterChatCommands()
 end
 
-function AddOn:OnEnable()
+function AddOn:OnEnable(rescheduled)
+	rescheduled = Util.Objects.Default(rescheduled, false)
+
 	--@debug@
 	-- this enables certain code paths that wouldn't otherwise be available in normal usage
 	self.mode:Enable(C.Modes.Develop)
@@ -36,7 +38,20 @@ function AddOn:OnEnable()
 
 	Logging:Debug("OnEnable(%s) : Mode=%s", self:GetName(), tostring(self.mode))
 
+	-- register events
+	if not rescheduled then
+		self:SubscribeToEvents()
+	end
+
 	self.player = AddOn.Player()
+	-- seems to be client regression introduced in 2.5.4 where the needed API calls to get a player's information
+	-- isn't always available on initial login, so reschedule
+	if not self.player then
+		self:ScheduleTimer(function() self:OnEnable() end, 2)
+		Logging:Warn("OnEnable(%s) : unable to determine player, rescheduling enable in 2 seconds", self:GetName())
+		return
+	end
+
 	Logging:Debug("%s", Util.Objects.ToString(self.player:toTable()))
 
 	if not self.player:IsClass("SHAMAN") then
@@ -58,12 +73,9 @@ function AddOn:OnEnable()
 		end
 	end
 
-	-- register events
-	self:SubscribeToEvents()
 	-- add minimap button
 	self:AddMinimapButton()
 	self:Print(format(L["chat_version"], tostring(self.version)) .. " is now loaded.")
-
 	-- fire message at end that addon has been enabled
 	self:SendMessage(C.Messages.Enabled)
 end

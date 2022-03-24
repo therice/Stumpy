@@ -1,5 +1,5 @@
-## Interface: 20503
-## X-Min-Interface: 20503
+## Interface: 20504
+## X-Min-Interface: 20504
 ## Title: |cff1784d1Stumpy|r
 ## Notes: Shaman Totem Toolbox for World of Warcraft (TBC Classic)
 ## Author: Jackburtón-Atiesh

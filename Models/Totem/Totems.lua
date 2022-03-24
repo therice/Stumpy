@@ -39,7 +39,7 @@ local Totem = AddOn.Package('Models.Totem'):Class('Totem')
 local AffectedUnitTimerName
 
 --- forward declare functions for initialization
-local SetFields,  PostInitialize
+local SetFields, PostInitialize
 
 --- @param element number
 function Totem:initialize(element, ...)
@@ -408,8 +408,6 @@ function TotemSet:OrderedIterator()
 		Util(self.totems):Copy()
 			:Map(function(attrs) return attrs[1] end)
 			:Flip()()
-
-
 	--Logging:Debug("Iterator() : %s", Util.Objects.ToString(ordering))
 
 	local index, element = 0

@@ -183,12 +183,10 @@ local Spell = AddOn.Package('Models.Spell'):Class('Spell')
 local SpellFields = {'id', 'spellBookId', 'name', 'modifier', 'icon', 'link'}
 function Spell:initialize(...)
 	local t = Util.Tables.Temp(...)
-	--Logging:Trace("%s", Util.Objects.ToString(t))
 	for index, field in pairs(SpellFields) do
 		self[field] = t[index]
 	end
 	Util.Tables.ReleaseTemp(t)
-	--Logging:Trace("%s", Util.Objects.ToString(self:toTable()))
 end
 
 local GetRank =  Util.Memoize.Memoize(
@@ -269,7 +267,7 @@ local Delay = 0.50
 local SpellBookType = "SPELL"
 
 --- @class Models.Spell.Spells
---- @field public spell table<string, table>
+--- @field public spells table<string, table>
 --- @field public subscriptions table<number, rx.Subscription>
 --- @field public timer table
 local Spells = AddOn.Instance(
@@ -451,6 +449,7 @@ end
 
 --- @return Models.Spell.Spell
 function Spells:GetById(id)
+	--Logging:Trace("GetById(%d)", id)
 	return self.spells.byId[id]
 end
 
