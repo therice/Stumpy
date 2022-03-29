@@ -86,7 +86,7 @@ function Button:Disable()
 end
 
 function Button:SetTextVertical(text)
-    function vertical(str)
+    local function vertical(str)
         -- dealing with multi-byte?
         local _, len = str:gsub("[^\128-\193]", "")
 

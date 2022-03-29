@@ -224,10 +224,10 @@ local Totems = AddOn.Instance(
 
 Totems.Events = Events
 
+--[[
 -- from Blizzard API
 local Item = Item
 
---[[
 function Totems:LoadItemNames()
 	Logging:Trace("LoadItemNames()")
 	for element = 1, C.MaxTotems do
@@ -427,7 +427,7 @@ end
 
 function TotemSet.CreateInstance(...)
 	local uuid, name = UUID.UUID(), format("%s (%s)", L["totem_set"], DateFormat.Full:format(Date()))
-	return Set(uuid, name)
+	return TotemSet(uuid, name)
 end
 
 --- @class Models.Totem.TotemSetDao
