@@ -1,0 +1,23 @@
+package-as: Stumpy
+
+manual-changelog:
+  filename: CHANGELOG.md
+  markup-type: markdown
+
+ignore:
+  - Test
+  - node_modules
+  - */Test/*
+  - .tools
+  - .gitignore
+  - .luacov
+  - .luacheckrc
+  - .pkgmeta
+  - .travis.yml
+  - .busted
+  - .commitlintrc.json
+  - .huskyrc.json
+  - .releaserc.json
+  - commitlint.config.js
+  - CHANGELOG.md
+  - package.json

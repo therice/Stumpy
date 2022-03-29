@@ -684,6 +684,28 @@ function C_PlayerInfo.IsConnected(playerLocation)
     return true
 end
 
+C_Map = {}
+function C_Map.GetMapChildrenInfo()
+    return {}
+end
+
+function C_Map.GetMapInfo(id)
+    return {}
+end
+
+function C_Map.GetBestMapForUnit(unit)
+    return -1
+end
+
+function CreateFromMixins(mixin)
+
+end
+
+Enum = {
+    UIMapType = {
+        Micro = 5
+    }
+}
 
 SlashCmdList = {}
 hash_SlashCmdList = {}

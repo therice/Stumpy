@@ -621,3 +621,7 @@ function EnumerateFrames(f)
 end
 
 function FauxScrollFrame_OnVerticalScroll(...) end
+
+function CreateVector2D()
+	return {}
+end
