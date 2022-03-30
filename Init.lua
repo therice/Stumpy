@@ -11,6 +11,9 @@ _G[AddOnName] = AddOn
 -- as we don't have access to that model yet here
 AddOn.version = GetAddOnMetadata(AddOnName, "Version")
 AddOn.author = GetAddOnMetadata(AddOnName, "Author")
+AddOn.title = GetAddOnMetadata(AddOnName, 'Title')
+
+_G[format('%s%s', AddOn.Constants.KeyBinds.PrefixHeader, AddOnName:upper())] = AddOn.title
 
 --@debug@
 -- if local development and not substituted, then use a dummy version

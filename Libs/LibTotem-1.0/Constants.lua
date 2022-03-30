@@ -39,6 +39,9 @@ lib.Constants = {
 			Water = 3,
 			Air   = 4
 		},
+		ElementIdToName = {
+
+		},
 		-- these are the item ids which correspond to the physical item (totem)
 		-- required to cast a totem of that element
 		ItemId = {
@@ -52,6 +55,8 @@ lib.Constants = {
 }
 
 local C = lib.Constants
+
+C.Totems.ElementIdToName = tInvert(C.Totems.Element)
 
 C.Totems.ItemId = {
 	[C.Totems.Element.Fire]  = 5176,

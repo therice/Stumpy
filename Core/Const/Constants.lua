@@ -89,6 +89,7 @@ AddOn.Constants = {
         PlayerTotemUpdate      = "PLAYER_TOTEM_UPDATE",
         SpellsChanged          = "SPELLS_CHANGED",
         UnitSpellcastSucceeded = "UNIT_SPELLCAST_SUCCEEDED",
+        UpdateBindings         = "UPDATE_BINDINGS",
         UpdateMacros           = "UPDATE_MACROS",
     },
 
@@ -99,6 +100,25 @@ AddOn.Constants = {
     Keys = {
         RightControl = "RCTRL",
         LeftControl  = "LCTRL",
+    },
+
+    KeyBinds = {
+        Prefix       = "STUMPY_TOTEMBAR_",
+        PrefixHeader = "BINDING_HEADER_",
+        PrefixName   = "BINDING_NAME_",
+        Header       = {
+
+        },
+        Name         = {
+
+        },
+        Type         = {
+            Button               = "BUTTON_%s",
+            Flyout               = "FLYOUT_%s",
+            FlyoutButton         = "FLYOUT_%s_BUTTON%d",
+            FlyoutTotemSet       = "FLYOUT_TOTEMSET",
+            FlyoutTotemSetButton = "FLYOUT_TOTEMSET_BUTTON%d"
+        },
     },
 
     Layout = {
@@ -161,6 +181,22 @@ do
     Classes.IdToTagName = tInvert(Classes.TagNameToId)
 end
 
+do
+    C.KeyBinds.Header = {
+        TotemBar        = C.KeyBinds.PrefixHeader .. 'TOTEMBAR',
+        TotemFlyout     = C.KeyBinds.PrefixHeader .. 'TOTEMFLYOUT',
+        TotemFlyoutType = C.KeyBinds.PrefixHeader .. 'TOTEMFLYOUT%s',
+        TotemSet        = C.KeyBinds.PrefixHeader .. 'TOTEMSET',
+    }
+
+    --C.KeyBinds.Name = {
+    --    TotemBarButton       = C.KeyBinds.Name.Prefix .. C.KeyBinds.Prefix .. C.KeyBinds.Type.Button,
+    --    TotemFlyout          = C.KeyBinds.Name.Prefix .. C.KeyBinds.Prefix .. C.KeyBinds.Type.Flyout,
+    --    TotemFlyoutButton    = C.KeyBinds.Name.Prefix .. C.KeyBinds.Prefix .. C.KeyBinds.Type.FlyoutButton,
+    --    TotemSetFlyout       = C.KeyBinds.Name.Prefix .. C.KeyBinds.Prefix .. C.KeyBinds.Type.FlyoutTotemSet,
+    --    TotemSetFlyoutButton = C.KeyBinds.Name.Prefix .. C.KeyBinds.Prefix .. C.KeyBinds.Type.FlyoutTotemSetButton,
+    --}
+end
 -- these are the item ids which correspond to the physical item (totem)
 -- required to cast a totem of that element
 --[[

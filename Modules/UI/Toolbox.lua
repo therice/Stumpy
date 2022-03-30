@@ -26,7 +26,7 @@ local BaseWidget = AddOn.ImportPackage('UI.Native').Widget
 --- @type Models.Totem.TotemSet
 local TotemSet = AddOn.Package('Models.Totem').TotemSet
 
-local CooldownFrame_Set, CooldownFrame_Clear = CooldownFrame_Set, CooldownFrame_Clear
+local CooldownFrame_Set, CooldownFrame_Clear, GetBindingKey = CooldownFrame_Set, CooldownFrame_Clear, GetBindingKey
 local ButtonTexture = {
 	bgFile =  UI.ResolveTexture("white"),
 	edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
@@ -43,12 +43,61 @@ local function InvalidLayout(layout)
 	error(format("Invalid layout '%s' (%s)", layout, Util.Objects.ToString(Util.Tables.Values(C.Layout))))
 end
 
+local KeyBindable = {
+	static = {
+		buttons = {},
+		AddBindableButtons = function(self, buttons)
+			for button, description in pairs(buttons) do
+				self.buttons[button] = description
+			end
+		end
+	},
+	included = function(_, clazz)
+		clazz.isKeyBindable = true
+	end,
+	GetKeyBindName = function(self, button)
+		return format('CLICK %s:%s', self._:GetName(), button)
+	end,
+	BuildKeyBindNames = function(self, ...)
+		local names = {}
+		for button, description in pairs(self.clazz.static.buttons) do
+			names[self:GetKeyBindName(button)] = format(description, ...)
+		end
+		return names
+	end,
+	-- only supports left click ATM
+	GetHotKey = function(self)
+		if Util.Tables.ContainsKey(self.clazz.static.buttons, C.Buttons.Left) then
+			return GetBindingKey(self:GetKeyBindName(C.Buttons.Left))
+		end
+
+		return nil
+	end,
+	UpdateHotKey = function(self)
+		if self._.hotKey then
+			local key = self:GetHotKey()
+			--Logging:Warn("UpdateHotKey(%s) : %s", self._:GetName(), tostring(key))
+			if Util.Strings.IsSet(key) then
+				self._.hotKey:SetText(UIUtil.ToShortKey(key))
+				self._.hotKey:Show()
+			else
+				self._.hotKey:Hide()
+			end
+		end
+	end
+}
+
 --- @type UI.Native.FrameContainer
 local FrameContainer = AddOn.Package('UI.Native').FrameContainer
 --- @class TotemBar
 local TotemBar = AddOn.Class('TotemBar', FrameContainer)
 --- @class TotemButton
-local TotemButton = AddOn.Class('TotemButton', FrameContainer)
+local TotemButton = AddOn.Class('TotemButton', FrameContainer):include(KeyBindable)
+TotemButton.static:AddBindableButtons({
+  [C.Buttons.Left]  = L['cast_totem'],
+  [C.Buttons.Right] = L['dismiss_totem'],
+})
+
 --- @class TotemFlyoutButton
 local TotemFlyoutButton = AddOn.Class('TotemFlyoutButton', FrameContainer)
 --- @class TotemFlyoutBar
@@ -260,6 +309,10 @@ end
 
 -- TotemBar END --
 
+local function GetKeyBindNamePattern(type)
+	return C.KeyBinds.Prefix .. type
+end
+
 -- TotemButton BEGIN --
 --- @param parent TotemBar
 --- @param element number
@@ -272,12 +325,22 @@ function TotemButton:initialize(parent, element)
 	--- @type boolean
 	self.pendingChange = false
 	FrameContainer.initialize(self, function() return self:_CreateFrame() end)
+	self:UpdateHotKey()
+
 	--- @type TotemFlyoutButton
 	self.flyoutButton = TotemFlyoutButton(self)
 	--- @type TotemFlyoutBar
 	self.flyoutBar = TotemFlyoutBar(self)
 	--- @type TotemPulseTimer
 	self.pulseTimer = TotemPulseTimer(self)
+end
+
+function TotemButton:__tostring()
+	return format("TotemButton(%d)", self.element)
+end
+
+function TotemButton:GetKeyBindNames()
+	return self:BuildKeyBindNames(LibTotem.Constants.Totems.ElementIdToName[self.element])
 end
 
 --- @return TotemFlyoutBar
@@ -330,7 +393,7 @@ function TotemButton:GetSpellName()
 end
 
 function TotemButton:_CreateFrame()
-	local button = CreateFrame('Button', self:GetName(), self.parent:GetFrame(), "BackdropTemplate,SecureHandlerBaseTemplate,SecureHandlerStateTemplate,SecureActionButtonTemplate")
+	local button = CreateFrame('CheckButton', self:GetName(), self.parent:GetFrame(), "BackdropTemplate,SecureHandlerBaseTemplate,SecureHandlerStateTemplate,SecureActionButtonTemplate")
 	button:SetBackdrop(ButtonTexture)
 	button:SetBackdropColor(0, 0, 0, 1)
 	button:SetBackdropBorderColor(0, 0, 0, 1)
@@ -346,8 +409,15 @@ function TotemButton:_CreateFrame()
 
 	button.cooldown = CreateFrame('Cooldown', button:GetName() .. '_Cooldown', button, 'CooldownFrameTemplate')
 	button.cooldown:SetReverse(true)
-	button.cooldown:SetFrameLevel(button:GetFrameLevel() + 2)
+	button.cooldown:SetFrameStrata(button:GetFrameStrata())
+	button.cooldown:SetFrameLevel(button:GetFrameLevel() + 1)
 	UI.SetInside(button.cooldown)
+
+	button.hotKey = button:CreateFontString(nil, "ARTWORK", "NumberFontNormalSmallGray")
+	button.hotKey:SetDrawLayer("OVERLAY")
+	button.hotKey:SetFont(button.hotKey:GetFont(), 13, "OUTLINE")
+	button.hotKey:SetVertexColor(0.75, 0.75, 0.75)
+	button.hotKey:SetPoint("TOPRIGHT", button, "TOPRIGHT", -2, -4)
 
 	-- dropped this in favor of putting the affected status on flyout button
 	--[[
@@ -1567,14 +1637,70 @@ function TotemPulseTimer:Start(duration, from)
 end
 -- TotemPulseTimer END  --
 
-function Toolbox:GetFrame()
-	if not self.totemBar then
-		local tb = TotemBar()
-		self.totemBar = tb
-		self.totemBar:Show()
+
+function Toolbox:OnBindingsUpdated()
+	Logging:Debug("OnBindingsUpdated")
+	if self.totemBar then
+		for _, button in pairs(self.totemBar:GetButtons()) do
+			button:UpdateHotKey()
+		end
+	end
+end
+
+--- configures the binding headers and names, used in display for configuring the associated key binds
+function Toolbox:SetupKeyBindDisplay()
+	_G[C.KeyBinds.Header.TotemBar] =  L['totem_bar']
+	_G[C.KeyBinds.Header.TotemFlyout] = L['totem_flyout']
+	_G[C.KeyBinds.Header.TotemSet] = L['totem_set']
+
+	-- probably redundant based upon where this is called
+	if self.totemBar then
+		local function SetKeyBindNames(names)
+			for name, description in pairs(names) do
+				Logging:Debug("%s => %s", name, description)
+				_G[C.KeyBinds.PrefixName .. name] = description
+			end
+		end
+
+		for _, button in pairs(self.totemBar:GetButtons()) do
+			SetKeyBindNames(button:GetKeyBindNames())
+		end
 	end
 
-	return self.totemBar
+	--[[
+	local TypeToElement = LibTotem.Constants.Totems.ElementIdToName
+	-- e.g. BINDING_HEADER_TOTEMFLYOUTFIRE
+	for _, name in pairs(TypeToElement) do
+		_G[format(C.KeyBinds.Header.TotemFlyoutType, name:upper())] = format("%s : %s %s",  L['totem_flyout'], name, L['spells'])
+	end
+
+	for element = 1, LibTotem.Constants.MaxTotems do
+		local elementName =  TypeToElement[element]
+		-- e.g. BINDING_NAME_STUMPY_TOTEMBAR_BUTTON_FIRE
+		_G[format(C.KeyBinds.Name.TotemBarButton, elementName:upper())] = format("%s %s", elementName, L['totem'])
+		-- e.g. BINDING_NAME_STUMPY_TOTEMBAR_FLYOUT_FIRE
+		_G[format(C.KeyBinds.Name.TotemFlyout, elementName:upper())] = format("%s %s", elementName, L['spells'])
+		for index = 1, FlyoutMaxButtons do
+			-- e.g. BINDING_NAME_STUMPY_TOTEMBAR_FLYOUT_FIRE_BUTTON1
+			_G[format(C.KeyBinds.Name.TotemFlyoutButton, elementName:upper(), index)] = format("%s %d", L['spell'], index)
+		end
+	end
+
+	-- e.g. BINDING_NAME_STUMPY_TOTEMBAR_FLYOUT_TOTEMSET
+	_G[C.KeyBinds.Name.TotemSetFlyout] = L['flyout']
+	for index = 1, SetMaxButtons do
+		-- e.g. BINDING_NAME_STUMPY_TOTEMBAR_FLYOUT_TOTEMSET_BUTTON1
+        _G[format(C.KeyBinds.Name.TotemSetFlyoutButton, index)] = format("%s %d", L['set'], index)
+	end
+	--]]
+end
+
+function Toolbox:CreateTotemBar()
+	if not self.totemBar then
+		self.totemBar = TotemBar()
+		self:SetupKeyBindDisplay()
+		self.totemBar:Show()
+	end
 end
 
 --- @return TotemBar

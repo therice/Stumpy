@@ -393,3 +393,50 @@ function U.ItemIconFn()
         end
     end
 end
+
+function U.ToShortKey(key)
+    --Logging:Debug("ToShortKey() : %s", key)
+    if key then
+        key = key:upper()
+        key = key:gsub(' ', '')
+        key = key:gsub('ALT%-', L['Alt'])
+        key = key:gsub('CTRL%-', L['Ctrl'])
+        key = key:gsub('SHIFT%-', L['Shift'])
+        key = key:gsub('NUMPAD', L['NumPad'])
+
+        key = key:gsub('PLUS', '%+')
+        key = key:gsub('MINUS', '%-')
+        key = key:gsub('MULTIPLY', '%*')
+        key = key:gsub('DIVIDE', '%/')
+
+        key = key:gsub('BACKSPACE', L['Backspace'])
+
+        for i = 1, 31 do
+            key = key:gsub('BUTTON' .. i, L['Button' .. i])
+        end
+
+        key = key:gsub('CAPSLOCK', L['Capslock'])
+        key = key:gsub('CLEAR', L['Clear'])
+        key = key:gsub('DELETE', L['Delete'])
+        key = key:gsub('END', L['End'])
+        key = key:gsub('HOME', L['Home'])
+        key = key:gsub('INSERT', L['Insert'])
+        key = key:gsub('MOUSEWHEELDOWN', L['Mouse Wheel Down'])
+        key = key:gsub('MOUSEWHEELUP', L['Mouse Wheel Up'])
+        key = key:gsub('NUMLOCK', L['Num Lock'])
+        key = key:gsub('PAGEDOWN', L['Page Down'])
+        key = key:gsub('PAGEUP', L['Page Up'])
+        key = key:gsub('SCROLLLOCK', L['Scroll Lock'])
+        key = key:gsub('SPACEBAR', L['Spacebar'])
+        key = key:gsub('SPACE', L['Spacebar'])
+        key = key:gsub('TAB', L['Tab'])
+
+        key = key:gsub('DOWNARROW', L['Down Arrow'])
+        key = key:gsub('LEFTARROW', L['Left Arrow'])
+        key = key:gsub('RIGHTARROW', L['Right Arrow'])
+        key = key:gsub('UPARROW', L['Up Arrow'])
+
+        --Logging:Debug("ToShortKey() : %s", key)
+        return key
+    end
+end

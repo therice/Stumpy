@@ -17,6 +17,8 @@ local Spells = AddOn.RequireOnUse('Models.Spell.Spells')
 local Dao = AddOn.Package('Models').Dao
 --- @type Core.Message
 local Message = AddOn.RequireOnUse('Core.Message')
+--- @type Core.Event
+local Event = AddOn.RequireOnUse('Core.Event')
 
 --- @class Toolbox
 local Toolbox = AddOn:NewModule('Toolbox', "AceTimer-3.0", "AceHook-3.0", "AceEvent-3.0")
@@ -56,7 +58,9 @@ function Toolbox:OnInitialize()
 	Logging:Debug("OnInitialize(%s)", self:GetName())
 	self.db = AddOn.db:RegisterNamespace(self:GetName(), self.defaults)
 	--- @type table<number, rx.Subscription>
-	self.subscriptions = nil
+	self.msgSubscriptions = nil
+	--- @type table<number, rx.Subscription>
+	self.evtSubscriptions = nil
 	--- @type TotemBar
 	self.totemBar = nil
 	--- @type Models.Totem.TotemSetDao
@@ -94,20 +98,16 @@ function Toolbox:AddDefaultTotemSet()
 end
 
 function Toolbox:RegisterCallbacks()
-	--[[
-	local function OnMessage(event)
-		Logging:Warn("OnMessage(%s)", event)
-	end
 
-	self:RegisterMessage(C.Messages.SpellsRefreshStart, OnMessage)
-	self:RegisterMessage(C.Messages.SpellsRefreshComplete, OnMessage)
-	--]]
-
-	self.subscriptions = Message():BulkSubscribe({
+	self.msgSubscriptions = Message():BulkSubscribe({
          [C.Messages.EnterCombat] = function(...) self:OnEnterCombat(...) end,
          [C.Messages.ExitCombat] = function(...) self:OnExitCombat(...) end,
          [C.Messages.ConfigChanged] = function(...)  self:OnConfigChanged(...) end,
      })
+
+	self.evtSubscriptions = Event():BulkSubscribe({
+		[C.Events.UpdateBindings] = function(...)  self:OnBindingsUpdated(...) end
+	})
 
 	Totems():RegisterCallbacks(self, {
 		[Totems().Events.TotemUpdated] = function(...) self:OnTotemEvent(...) end
@@ -121,8 +121,10 @@ end
 function Toolbox:UnregisterCallbacks()
 	self.totemSets:UnregisterAllCallbacks(self)
 	Totems():UnregisterAllCallbacks(self)
-	AddOn.Unsubscribe(self.subscriptions)
-	self.subscriptions = nil
+	AddOn.Unsubscribe(self.evtSubscriptions)
+	self.evtSubscriptions = nil
+	AddOn.Unsubscribe(self.msgSubscriptions)
+	self.msgSubscriptions = nil
 end
 
 function Toolbox:EnableOnStartup()
@@ -258,7 +260,7 @@ function Toolbox:OnTotemEvent(event, totem)
 
 	-- todo : InCombat and totemBar not yet created
 	-- if the totem bar isn't visible, create and display
-	if not self.totemBar then self:GetFrame() end
+	if not self.totemBar then self:CreateTotemBar() end
 
 	if Util.Objects.Equals(Totems().Events.TotemUpdated, event) then
 		self.totemBar:UpdateButton(totem)

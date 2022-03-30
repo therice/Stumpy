@@ -14,6 +14,8 @@ local SlashCommands = AddOn.Require('Core.SlashCommands')
 
 function AddOn:OnInitialize()
 	Logging:Debug("OnInitialize(%s)", self:GetName())
+
+
 	-- convert to a semantic version
 	self.version = SemanticVersion(self.version)
 	-- bitfield which keeps track of our operating mode
