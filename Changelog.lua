@@ -2,6 +2,9 @@
 local _, AddOn = ...
 
 AddOn.Changelog = [=[
+2022.0.3 (2022-03-31)
+* add UI for configuration and add support for totem bar settings 260f19d
+
 2022.0.2 (2022-03-30)
 * add support for keybinds and fix cooldown timer intermittently not working on totems ccc014a
 * simplify key binding abbreviation for display 0c6a9e9
