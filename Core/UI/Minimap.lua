@@ -14,15 +14,18 @@ function MinimapButton:initialize()
                 icon = format("Interface\\AddOns\\%s\\Media\\Textures\\icon.blp", name),
                 OnTooltipShow = function(tooltip)
                     tooltip:AddDoubleLine(format("|cfffe7b2c%s|r", name), format("|cffFFFFFF%s|r", tostring(AddOn.version)))
-                    tooltip:AddLine(format(TooltipEntry, L["left_click"], L["open_standings"]))
-                    tooltip:AddLine(format(TooltipEntry, L["right_click"] , L["open_config"]))
+                    tooltip:AddLine(format(TooltipEntry, L["left_click"], L["open_config"]))
                     tooltip:AddLine(format(TooltipEntry, L["shift_left_click"], L['logging_window_toggle']))
                 end,
                 OnClick = function(_, button)
                     if button == C.Buttons.Right then
 
                     elseif button == C.Buttons.Left then
-
+                        if IsShiftKeyDown() then
+                            AddOn:Logging():Toggle()
+                        else
+                            AddOn:ToggleLaunchpad()
+                        end
                     end
                 end,
             }

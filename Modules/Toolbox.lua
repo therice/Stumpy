@@ -43,7 +43,7 @@ Toolbox.defaults = {
 			spacing   = 5,
 			layout    = C.Layout.Grid,
 		},
-		-- this is for the pulse timer and size is either width or height, based upon toolbox grow1
+		-- this is for the pulse timer and size is either width or height, based upon toolbox grow
 		pulse = {
 			size    = 15
 		},
@@ -417,6 +417,13 @@ function Toolbox:SetElementSpell(element, spell)
 			self.totemSets:Update(set, 'totems', true, {element = element, spell = spell})
 		end
 	end
+end
+
+function Toolbox:LaunchpadSupplements()
+	return {
+		{L["totem_bar"], function(container) self:LayoutConfigInterface(container) end , false},
+		{L["totem_set"], function(container) self:LayoutTotemSetInterface(container) end , false},
+	}
 end
 
 --[[

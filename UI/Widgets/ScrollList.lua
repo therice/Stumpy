@@ -19,7 +19,7 @@ function ScrollList:initialize(parent, name, list)
 	self.list = list
 end
 
-local DefaultHL, DefaultP = {C.Colors.Grey:GetRGBA()}, {C.Colors.Salmon:GetRGBA()}
+local DefaultHL, DefaultP = {C.Colors.Grey:GetRGBA()}, {C.Colors.Blue:GetRGBA()}
 DefaultHL[4] = 0.5
 DefaultP[4] = 0.9
 

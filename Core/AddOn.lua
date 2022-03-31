@@ -14,13 +14,13 @@ local SlashCommands = AddOn.Require('Core.SlashCommands')
 
 function AddOn:OnInitialize()
 	Logging:Debug("OnInitialize(%s)", self:GetName())
-
-
 	-- convert to a semantic version
 	self.version = SemanticVersion(self.version)
 	-- bitfield which keeps track of our operating mode
 	--- @type Core.Mode
 	self.mode = AddOn.Package('Core').Mode()
+	-- is the addon enabled, can be altered at runtime
+	self.enabled = true
 	-- add on settings
 	self.db = self:GetLibrary("AceDB"):New(self:Qualify('DB'), self.defaults)
 	if not AddOn._IsTestContext() then Logging:SetRootThreshold(self.db.profile.logThreshold) end
@@ -49,7 +49,7 @@ function AddOn:OnEnable(rescheduled)
 	-- seems to be client regression introduced in 2.5.4 where the needed API calls to get a player's information
 	-- isn't always available on initial login, so reschedule
 	if not self.player then
-		self:ScheduleTimer(function() self:OnEnable() end, 2)
+		self:ScheduleTimer(function() self:OnEnable(true) end, 2)
 		Logging:Warn("OnEnable(%s) : unable to determine player, rescheduling enable in 2 seconds", self:GetName())
 		return
 	end
@@ -67,13 +67,28 @@ function AddOn:OnEnable(rescheduled)
 		return
 	end
 
+	local configSupplements, lpadSupplements = {}, {}
 	for name, module in self:IterateModules() do
 		Logging:Debug("OnEnable(%s) : Examining module (startup) '%s'", self:GetName(), name)
 		if module:EnableOnStartup() then
 			Logging:Debug("OnEnable(%s) : Enabling module (startup) '%s'", self:GetName(), name)
 			module:Enable()
 		end
+
+		-- extract module's configuration supplement for later application
+		local cname, cfn = self:GetConfigSupplement(module)
+		if cname and cfn then
+			configSupplements[cname] = cfn
+		end
+
+		-- support multiple launchpad supplements per module
+		Util.Tables.CopyInto(lpadSupplements, self:GeLaunchpadSupplements(module))
 	end
+
+	-- track launchpad (UI) supplements for application as needed
+	-- will only be applied the first time the UI is displayed
+	-- {applied [boolean], configuration supplements [table], launchpad supplements [table]}
+	self.supplements = {false, configSupplements, lpadSupplements}
 
 	-- add minimap button
 	self:AddMinimapButton()

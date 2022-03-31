@@ -134,6 +134,21 @@ local ModulePrototype = {
         Logging:Debug("EnableOnStartup(%s) : %s", self:GetName(), tostring(enable))
         return enable
     end,
+    -- a function which is invoked for determining configuration supplements, which will be added to generic configuration layout
+    -- must return a tuple
+    --  1, a string which is the configuration group name (all settings will be bucketed here)
+    --  2, a function which is invoked and takes a container for adding configuration settings
+    ConfigSupplement = function(self)
+        return nil, nil
+    end,
+    -- a function which is invoked for determining launchpad supplements, which will be added as a new layout
+    -- must return an array of tuples, where each tuple is
+    --  1, a string which is the launchpad module display name
+    --  2, a function which is invoked and takes a container for adding a launchpad module
+    --  3, a boolean indicating if enable/disable support should be setup
+    LaunchpadSupplements = function(self)
+        return { } -- nil, nil, false
+    end,
 }
 
 AddOn:SetDefaultModulePrototype(ModulePrototype)

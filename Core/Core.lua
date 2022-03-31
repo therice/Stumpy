@@ -44,6 +44,12 @@ function AddOn:CombatEmulationEnabled()
 	return self.mode:Enabled(C.Modes.EmulateCombat)
 end
 
+--- @return Logging
+function AddOn:Logging()
+	return self:GetModule("Logging")
+end
+
+
 --- @return Toolbox
 function AddOn:Toolbox()
 	return self:GetModule("Toolbox")
