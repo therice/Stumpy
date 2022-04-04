@@ -189,10 +189,13 @@ function EditBox.AddTopText(self,text,size)
     return self
 end
 
-function EditBox.AddBackgroundText(self,text)
+--- ... supports 3 or more args which compose the color for bg text
+function EditBox.AddBackgroundText(self,text, ...)
     if not self.backgroundText then
+        local color = select('#', ...) >= 3 and {...} or {.5,.5,.5, 1}
         self.backgroundText =
-            NativeUI:New('Text', self, nil, 12, "ChatFontNormal"):Point("LEFT",2,0):Point("RIGHT",-2,0):Color(.5,.5,.5)
+            NativeUI:New('Text', self, nil, 12, "ChatFontNormal")
+                :Point("LEFT",2,0):Point("RIGHT",-2,0):Color(unpack(color))
     end
 
     local function FocusGained(self)

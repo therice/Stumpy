@@ -10,7 +10,8 @@ local UIPackage, UIUtilPackage = AddOn.Package('UI'), AddOn.Package('UI.Util')
 local UI = AddOn.Require('UI.Native')
 -- @type UI.Native.BaseWidget
 local BaseWidget = AddOn.ImportPackage('UI.Native').Widget
-
+--- @type LibTotem
+local LibTotem = AddOn:GetLibrary("Totem")
 
 -- generic build entry attributes
 --- @class UI.Util.Attributes
@@ -311,6 +312,17 @@ function U.GetPlayerClassColor(name)
     return U.GetClassColor(AddOn:UnitClass(name))
 end
 
+local TotemColors = {
+    [LibTotem.Constants.Totems.Element.Fire]  = C.Colors.DeathKnightRed,
+    [LibTotem.Constants.Totems.Element.Earth] = C.Colors.Pumpkin,
+    [LibTotem.Constants.Totems.Element.Water] = C.Colors.Blue,
+    [LibTotem.Constants.Totems.Element.Air]   = C.Colors.White,
+}
+
+function U.GetTotemColor(element)
+    return TotemColors[element] or C.Colors.Aluminum
+end
+
 function U.RGBToHex(r,g,b)
     return string.format("%02X%02X%02X", math.floor(255*r), math.floor(255*g), math.floor(255*b))
 end
@@ -337,16 +349,12 @@ function U.PlayerClassColorDecorator(name)
     return ColoredDecorator(U.GetPlayerClassColor(name))
 end
 
-function U.ResourceTypeDecorator(resourceType)
-    return ColoredDecorator(U.GetResourceTypeColor(resourceType))
-end
-
-function U.ActionTypeDecorator(actionType)
-    return ColoredDecorator(U.GetActionTypeColor(actionType))
-end
-
 function U.ItemQualityDecorator(rarity)
     return ColoredDecorator(GetItemQualityColor(rarity))
+end
+
+function U.TotemDecorator(element)
+    return ColoredDecorator(U.GetTotemColor(element))
 end
 
 function U.ClassIconFn()

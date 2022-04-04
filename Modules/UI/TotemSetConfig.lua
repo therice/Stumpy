@@ -9,13 +9,14 @@ local Util = AddOn:GetLibrary("Util")
 local UI = AddOn.Require('UI.Native')
 --- @type UI.Util
 local UIUtil = AddOn.Require('UI.Util')
---- @type LibWindow
-local Window = AddOn:GetLibrary('Window')
 --- @type Toolbox
 local Toolbox = AddOn:GetModule("Toolbox", true)
 --- @type LibDialog
 local Dialog = AddOn:GetLibrary("Dialog")
-
+--- @type LibTotem
+local LibTotem = AddOn:GetLibrary("Totem")
+--- @type Models.Spell.Spells
+local Spells = AddOn.RequireOnUse('Models.Spell.Spells')
 
 local Tabs = {
 	[L["totems"]]  = L["totems_desc"],
@@ -138,6 +139,11 @@ function Toolbox:LayoutTotemSetInterface(container)
 
 	self:LayoutTotemSetGeneralTab(
 		container.setSettings:GetByName(L["general"]),
+		SelectedTotemSet
+	)
+
+	self:LayoutTotemSetTotemsTab(
+		container.setSettings:GetByName(L["totems"]),
 		SelectedTotemSet
 	)
 
@@ -304,18 +310,181 @@ function Toolbox:LayoutTotemSetGeneralTab(tab, setSupplier)
 
 	-- will be invoked when a set is selected
 	tab.Update = function(self)
-		local set = setSupplier()
-		self:SetFieldsEnabled(set)
-		if set then
-			self.name:Text(set.name)
-			self.icon:SetIcon(set.icon)
+		if self:IsVisible() then
+			local set = setSupplier()
+			self:SetFieldsEnabled(set)
+			if set then
+				self.name:Text(set.name)
+				self.icon:SetIcon(set.icon)
+			end
 		end
 	end
 
 	tab.iconList:Update()
 	tab.iconList:Hide()
 
-	tab:SetFieldsEnabled()
-
+	tab:SetScript("OnShow", function(self) self:Update() end)
 	self.setGeneralTab = tab
+end
+
+local TotemWidth, TotemHeight = 225, 30
+
+function Toolbox:LayoutTotemSetTotemsTab(tab, setSupplier)
+	local module = self
+
+	local function TotemCoord(self, xAdjust, yAdjust)
+		xAdjust = Util.Objects.IsNumber(xAdjust) and xAdjust or 0
+		yAdjust = Util.Objects.IsNumber(yAdjust) and yAdjust or 0
+		return 10 + xAdjust, (-(TotemHeight/4) - ((self.order - 1) * (TotemHeight + (TotemHeight/4)))) + yAdjust
+	end
+
+	local function Swap(one, two)
+		Logging:Debug("SwapButtons(%d, %d)", one.element, two.element)
+		local pointOne, xOne, yOne =  unpack(one.point)
+		local pointTwo, _, _, xTwo, yTwo = two:GetPoint()
+		local orderOne, orderTwo = one.order, two.order
+
+		one:ClearAllPoints()
+		one:SetPoint(pointTwo, xTwo, yTwo)
+		one.order = orderTwo
+
+		two:ClearAllPoints()
+		two:SetPoint(pointOne, xOne, yOne)
+		two.order = orderOne
+
+		--- @type Models.Totem.TotemSet
+		local set = setSupplier()
+		if set then
+			set:SetOrder(one.element, one.order)
+			set:SetOrder(two.element, two.order)
+			module.totemSets:Update(set, 'totems')
+		end
+	end
+
+	local function EditOnDragStart(self)
+		if self:IsMovable() then
+			self:CapturePoint()
+			self:StartMoving()
+		end
+	end
+
+	local function EditOnDragStop(self)
+		self:StopMovingOrSizing()
+
+		local target
+		for i = 1, #tab.totems do
+			local candidate = tab.totems[i]
+			if candidate:IsMouseOver() and candidate ~= self then
+				target = candidate
+				break
+			end
+		end
+
+		if target then
+			Swap(self, target)
+		else
+			self:RestorePosition()
+		end
+
+		self:ClearPoint()
+	end
+
+	tab.totems = {}
+
+	for element = 1, LibTotem.Constants.MaxTotems do
+		local totem =
+			UI:New('EditBox', tab)
+		        :Size(TotemWidth, TotemHeight)
+				--:ColorBorder(C.Colors.Grey:GetRGBA())
+				:BackgroundText(
+					tostring(LibTotem.Constants.Totems.ElementIdToName[element]),
+					UIUtil.GetTotemColor(element):GetRGBA()
+				)
+
+		tab.totems[element] = totem
+		totem.element = element
+		totem.order = element
+		totem:Point("TOPLEFT", TotemCoord(totem))
+		totem:SetEnabled(false)
+		totem:SetMovable(false)
+
+		local dd =
+			UI:New('Dropdown', totem)
+				:Size(TotemWidth - 40)
+				:Point("RIGHT", totem, "RIGHT", -5, 0)
+				:SetTextDecorator(function(item) return item.value.name end)
+				:SetList(Spells():GetHighestRanksByTotemElement(element))
+				:SetClickHandler(
+					function(_, _, item)
+						--- @type Models.Totem.TotemSet
+						local set = setSupplier()
+						if set then
+							set:SetSpell(element, tonumber(item.value:GetId()))
+							module.totemSets:Update(set, 'totems')
+						end
+
+						return true
+					end
+				)
+		dd:IterateItems(function(item) item.icon = item.value.icon end)
+		dd:SetFrameLevel(totem:GetFrameLevel() + 1)
+		totem.dd = dd
+
+		totem.SetActive = function(self, active)
+			self:SetMovable(active)
+			self:RegisterForDrag(active and C.Buttons.Left or nil)
+			self:SetScript("OnDragStart", active and EditOnDragStart or nil)
+			self:SetScript("OnDragStop", active and EditOnDragStop or nil)
+			self.dd:SetEnabled(active)
+		end
+
+		totem.ClearPoint = function(self)
+			self.point = nil
+		end
+
+		totem.CapturePoint = function(self)
+			local point, _, _, x, y = self:GetPoint()
+			self.point = {point, x, y}
+		end
+
+		totem.RestorePosition = function(self)
+			self:ClearAllPoints()
+			self:SetPoint(self.point[1], self.point[2], self.point[3])
+		end
+
+		totem:SetActive(true)
+	end
+
+	tab.UpdateTotems = function(self)
+		--Logging:Debug("UpdateTotems()")
+		--- @type Models.Totem.TotemSet
+		local set = setSupplier()
+		if set then
+			for _, totem in pairs(self.totems) do
+				local order, spell = set:Get(totem.element)
+				--Logging:Debug("UpdateTotems(%d) : %s, %s", totem.element, tostring(order), tostring(spell))
+				totem.order = order
+				totem.dd:SetViaValue(spell)
+				totem:Point("TOPLEFT", TotemCoord(totem))
+			end
+		end
+	end
+
+	tab.SetFieldsEnabled = function(self, set)
+		local enabled = set or false
+		for _, totem in pairs(self.totems) do
+			totem:SetActive(enabled)
+		end
+	end
+
+	tab.Update = function(self)
+		--Logging:Debug("Update()")
+		if self:IsVisible() then
+			self:SetFieldsEnabled(setSupplier())
+			self:UpdateTotems()
+		end
+	end
+
+	tab:SetScript("OnShow", function(self) self:Update() end)
+	self.setTotemsTab = tab
 end

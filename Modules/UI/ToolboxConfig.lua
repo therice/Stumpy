@@ -134,6 +134,7 @@ function Toolbox:LayoutTotemFlyoutTab(tab)
 		    :Datasource(
 				module,
 				module.db.profile,
+				module.db.profile,
 				'flyout.size'
 			)
 
