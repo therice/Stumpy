@@ -43,6 +43,14 @@ local initialLoad = true
 function AddOn:OnPlayerLogin(...)
 	Logging:Debug("OnPlayerLogin() : %s", Util.Objects.ToString({...}))
 
+	-- if the player is not yet ready
+	if not self.player then
+		local args = {...}
+		self:ScheduleTimer(function() self:OnPlayerLogin(unpack(args)) end, 1.5)
+		Logging:Warn("OnPlayerLogin(%s) : unable to determine player, rescheduling event", self:GetName())
+		return
+	end
+
 	local handle
 
 	local function After()
