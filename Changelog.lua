@@ -2,6 +2,9 @@
 local _, AddOn = ...
 
 AddOn.Changelog = [=[
+2022.0.5 (2022-04-04)
+* add support for selecting spells and ordering totems for totem sets via config UI ebfb915
+
 2022.0.4 (2022-04-04)
 * add GetMacroIcons as valid API usage f0ea18a
 * add support for adding and removing totem sets (missing totem order and spell selection) b9391e8
