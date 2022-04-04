@@ -2,6 +2,9 @@
 local _, AddOn = ...
 
 AddOn.Changelog = [=[
+2022.0.6 (2022-04-04)
+* correct regression with totem flyout size not being handled via configuration UI d44b1fa
+
 2022.0.5 (2022-04-04)
 * add support for selecting spells and ordering totems for totem sets via config UI ebfb915
 
