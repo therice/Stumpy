@@ -11,6 +11,12 @@ local SemanticVersion  = AddOn.Package('Models').SemanticVersion
 local UIUtil = AddOn.Require('UI.Util')
 --- @type Core.SlashCommands
 local SlashCommands = AddOn.Require('Core.SlashCommands')
+--- @type Models.Totem.Totems
+local Totems = AddOn.RequireOnUse('Models.Totem.Totems')
+--- @type Core.Message
+local Message = AddOn.RequireOnUse('Core.Message')
+--- @type Models.Spell.Spells
+local Spells = AddOn.RequireOnUse('Models.Spell.Spells')
 
 function AddOn:OnInitialize()
 	Logging:Debug("OnInitialize(%s)", self:GetName())
@@ -95,6 +101,7 @@ function AddOn:OnEnable(rescheduled)
 	self:Print(format(L["chat_version"], tostring(self.version)) .. " is now loaded.")
 	-- fire message at end that addon has been enabled
 	self:SendMessage(C.Messages.Enabled)
+	self:AfterEnabled()
 end
 
 function AddOn:OnDisable()
@@ -102,4 +109,24 @@ function AddOn:OnDisable()
 	for _, module in self:IterateModules() do
 		module:Disable()
 	end
+end
+
+function AddOn:AfterEnabled()
+	Logging:Debug("AfterEnabled(%s)", self:GetName())
+
+	local handle
+
+	local function After()
+		Logging:Debug("After()")
+		AddOn.Unsubscribe(handle)
+		Totems():Initialize()
+		self:MacroMediator():Update()
+	end
+
+	-- wait for spells to be refreshed before initializing totems
+	handle = Message():BulkSubscribe({
+		[C.Messages.SpellsRefreshComplete] = function(...) After() end,
+	})
+
+	Spells():Enable(true)
 end
