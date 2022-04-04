@@ -49,6 +49,7 @@ do
     AddOn:AddLibrary('AceConfigDialog', 'AceConfigDialog-3.0')
     AddOn:AddLibrary('AceConfigRegistry', 'AceConfigRegistry-3.0')
     AddOn:AddLibrary('Window', 'LibWindow-1.1')
+    AddOn:AddLibrary('Dialog', 'LibDialog-1.0')
     AddOn:AddLibrary('DataBroker', 'LibDataBroker-1.1')
     AddOn:AddLibrary('DbIcon', 'LibDBIcon-1.0')
     AddOn:AddLibrary('JSON', 'LibJSON-1.0')

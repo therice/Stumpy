@@ -35,7 +35,8 @@ function ScrollList:Create()
 	sl.linesPerPage, sl.lineHeight, sl.linePaddingLeft, sl.scrollWidth = 1, 16, 7, 0
 	sl.fontName, sl.fontSize, sl.lineTexture, sl.ignoreBlend  = nil, 12, BaseWidget.ResolveTexture('white'), true
 	sl.lineTextureHeight, sl.lineTextureColorHL, sl.lineTextureColorP = 24, DefaultHL, DefaultP
-	sl.enableHoverAnimation, sl.lineTextFormatter = true, nil
+	sl.enableHoverAnimation, sl.lineTextFormatter, sl.iconSupplier = true, nil, nil
+	sl.sortFn = nil
 
 	-- List tracks the actual display items (lines)
 	-- L is the raw values (indexes) from which they are created
@@ -65,8 +66,10 @@ function ScrollList:Create()
 		'ClearSelection', ScrollList.ClearSelection,
 		'Clear', ScrollList.Clear,
 		'SetList', ScrollList.SetList,
+		'SortFunction', ScrollList.SortFunction,
 		'Selected', ScrollList.Selected,
 		'LineTextFormatter', ScrollList.SetLineTextFormatter,
+		'IconSupplier', ScrollList.SetIconSupplier,
 		'Tooltip', ScrollList.SetTooltip
 	)
 
@@ -135,6 +138,11 @@ end
 
 function ScrollList.SetLineTextFormatter(self, formatter)
 	self.lineTextFormatter = formatter
+	return self
+end
+
+function ScrollList.SetIconSupplier(self, supplier)
+	self.iconSupplier = supplier
 	return self
 end
 
@@ -209,10 +217,20 @@ local function SortListFn(x, y)
 	end
 end
 
+function ScrollList.SortFunction(self, fn)
+	self.sortFn = fn
+	return self
+end
+
 function ScrollList.SetList(self, list, order)
 	local SortList = {}
 
 	self.L = {}
+
+	if not Util.Objects.IsTable(order) and self.sortFn then
+		order = self.sortFn(list)
+	end
+
 	if not Util.Objects.IsTable(order) then
 		for v in pairs(list) do
 			SortList[#SortList + 1] = v
@@ -536,19 +554,18 @@ function ScrollList.Update(self)
 			end
 		end
 
-		--[[
-		if self.LDisabled then
-			if self.LDisabled[current] then
-				line:SetEnabled(false)
-				line.ignoreDrag = true
-				line.text:Color(.5,.5,.5,1)
-				line.PushedTexture:SetAlpha(0)
+		local icon = self.iconSupplier and self.iconSupplier(l) or nil
+		if icon then
+			if type(icon)=='table' then
+				line.iconRight:SetTexture(icon[1])
+				line.iconRight:SetSize(icon[2],icon[2])
 			else
-				line.text:Color()
-				line.PushedTexture:SetAlpha(1)
+				line.iconRight:SetTexture(icon)
+				line.iconRight:SetSize(self.lineHeight, self.lineHeight)
 			end
+		else
+			line.iconRight:SetTexture("")
 		end
-		--]]
 
 		line:Show()
 		line.index = current

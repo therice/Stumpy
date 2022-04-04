@@ -100,6 +100,8 @@ function Toolbox:LayoutBarTab(tab)
 				module.db.profile,
 				'pulse.size'
 			)
+
+	self.barTab = tab
 end
 
 local function CreateLayoutWidgets(tab)
@@ -142,6 +144,8 @@ function Toolbox:LayoutTotemFlyoutTab(tab)
 				module.db.profile,
 				'flyout.spacing'
 			)
+
+	self.totemTab = tab
 end
 
 function Toolbox:LayoutSetFlyoutTab(tab)
@@ -172,4 +176,6 @@ function Toolbox:LayoutSetFlyoutTab(tab)
 				module.db.profile,
 				'set.spacing'
 			)
+
+	self.totemSetTab = tab
 end

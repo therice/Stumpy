@@ -428,13 +428,19 @@ function Spells:IsLoaded()
 	return spellCount > 0 and uncachedCount == 0
 end
 
-function Spells:Enable()
+function Spells:Enable(load)
 	if Util.Objects.IsNil(self.subscriptions) then
+		load = Util.Objects.Default(load, false)
+
 		Logging:Debug("Enable()")
 		self.subscriptions = Event():BulkSubscribe({
            [C.Events.SpellsChanged] = function(...) OnSpellsChanged(self, ...) end,
            [C.Events.LearnedSpellInTab] = function(...) OnSpellsChanged(self, ...) end
        })
+
+		if load then
+			OnSpellsChanged(self)
+		end
 	end
 end
 

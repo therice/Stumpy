@@ -63,8 +63,9 @@ function IconBordered:Create()
                 self:GetNormalTexture():SetVertexColor(0.5,0.5,0.5)
             end
         end
-
+        return self
     end
+
     b.Desaturate = function(self)
         return self:GetNormalTexture():SetDesaturated(true)
     end

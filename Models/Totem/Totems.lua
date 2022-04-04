@@ -357,6 +357,10 @@ function TotemSet:initialize(id, name, icon)
 	end
 end
 
+function TotemSet:__tostring()
+	return self.name
+end
+
 function TotemSet:SetIcon(icon)
 	self.icon = tonumber(icon)
 end
@@ -427,7 +431,9 @@ end
 
 function TotemSet.CreateInstance(...)
 	local uuid, name = UUID.UUID(), format("%s (%s)", L["totem_set"], DateFormat.Full:format(Date()))
-	return TotemSet(uuid, name)
+	local totemSet = TotemSet(uuid, name, TotemSet.Default.icon)
+	totemSet.totems = Util.Tables.Copy(TotemSet.Default.totems)
+	return totemSet
 end
 
 --- @class Models.Totem.TotemSetDao

@@ -126,6 +126,11 @@ AddOn.Constants = {
         Grid    = "GRID",
     },
 
+    Popups = {
+        ConfirmDeleteTotemSet   =   name .. "_ConfirmDeleteTotemSet",
+    },
+
+
     Macros = {
         CastByElement = "castbyelement",
         CastSequence  = "castsequence",

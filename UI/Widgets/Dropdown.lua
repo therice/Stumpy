@@ -238,6 +238,7 @@ end
 
 function Dropdown:IterateItems(fn)
 	Util.Tables.Call(self.List, fn)
+	return self
 end
 
 

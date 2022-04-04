@@ -104,8 +104,9 @@ function ScrollFrame.OnMouseWheel(self, delta)
 end
 
 function ScrollFrame.SetNewHeight(self, height)
-	-- Logging:Debug("ScrollFrame.SetNewHeight(%d)", height)
+	--Logging:Debug("ScrollFrame.SetNewHeight(%d)", height)
 	self.content:SetHeight(height)
+	--Logging:Debug("ScrollFrame.SetNewHeight(%d)", max(height - self:GetHeight(), 0))
 	self.ScrollBar:Range(0, max(height - self:GetHeight(), 0), nil, true)
 	self.ScrollBar:UpdateButtons()
 	ScrollFrame.CheckHideScroll(self.ScrollBar)

@@ -26,6 +26,7 @@ local BaseWidget = AddOn.ImportPackage('UI.Native').Widget
 --- @type Models.Totem.TotemSet
 local TotemSet = AddOn.Package('Models.Totem').TotemSet
 
+-- https://github.com/tomrus88/BlizzardInterfaceCode/blob/4334b87a5365523a8d5211fba0819818946a967f/Interface/FrameXML/Cooldown.lua
 local CooldownFrame_Set, CooldownFrame_Clear, GetBindingKey = CooldownFrame_Set, CooldownFrame_Clear, GetBindingKey
 local ButtonTexture = {
 	bgFile =  UI.ResolveTexture("white"),
@@ -393,7 +394,7 @@ function TotemButton:GetSpellName()
 end
 
 function TotemButton:_CreateFrame()
-	local button = CreateFrame('CheckButton', self:GetName(), self.parent:GetFrame(), "BackdropTemplate,SecureHandlerBaseTemplate,SecureHandlerStateTemplate,SecureActionButtonTemplate")
+	local button = CreateFrame('Button', self:GetName(), self.parent:GetFrame(), "BackdropTemplate,SecureHandlerBaseTemplate,SecureHandlerStateTemplate,SecureActionButtonTemplate")
 	button:SetBackdrop(ButtonTexture)
 	button:SetBackdropColor(0, 0, 0, 1)
 	button:SetBackdropBorderColor(0, 0, 0, 1)
@@ -408,9 +409,10 @@ function TotemButton:_CreateFrame()
 	button.pending:Hide()
 
 	button.cooldown = CreateFrame('Cooldown', button:GetName() .. '_Cooldown', button, 'CooldownFrameTemplate')
+	button.cooldown:SetAllPoints()
 	button.cooldown:SetReverse(true)
 	button.cooldown:SetFrameStrata(button:GetFrameStrata())
-	button.cooldown:SetFrameLevel(button:GetFrameLevel() + 1)
+	button.cooldown:SetFrameLevel(button:GetFrameLevel() + 2)
 	UI.SetInside(button.cooldown)
 
 	button.hotKey = button:CreateFontString(nil, "ARTWORK", "NumberFontNormalSmallGray")
