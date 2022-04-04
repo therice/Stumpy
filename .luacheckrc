@@ -98,6 +98,7 @@ read_globals = {
 	"GetLootSlotLink",
 	"GetLootSourceInfo",
 	"GetLootThreshold",
+	"GetMacroIcons",
 	"GetMasterLootCandidate",
 	"GetNumGuildMembers",
 	"GetNumGroupMembers",
