@@ -75,7 +75,15 @@ end
 
 function MacroMediator:OnTotemSetDaoEvent(event, eventDetail)
 	Logging:Debug("OnTotemSetDaoEvent(%s) : %s", event, Util.Objects.ToString(eventDetail))
-	self:Update()
+	--- @type Models.Totem.TotemSet
+	local totemSet = eventDetail.entity
+	-- only need to update macros if the totem set is the active one
+	if totemSet and Util.Strings.Equal(totemSet.id, AddOn:Toolbox():GetActiveTotemSetId()) then
+		-- also, no material changes in macros unless totems change
+		if Util.Strings.Equal(eventDetail.attr, 'totems') then
+			self:Update()
+		end
+	end
 end
 
 function MacroMediator:Update()
