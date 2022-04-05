@@ -2,6 +2,9 @@
 local _, AddOn = ...
 
 AddOn.Changelog = [=[
+2022.0.7 (2022-04-05)
+* update totem bar as totem set(s) are udpated via config UI (doesn't support deletion of active set currently) db96271
+
 2022.0.6 (2022-04-04)
 * correct regression with totem flyout size not being handled via configuration UI d44b1fa
 
