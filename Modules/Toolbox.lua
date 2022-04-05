@@ -114,7 +114,9 @@ function Toolbox:RegisterCallbacks()
 	})
 
 	self.totemSets:RegisterCallbacks(self, {
-		[Dao.Events.EntityUpdated] = function(...) self:OnTotemSetDaoEvent(...) end
+		[Dao.Events.EntityUpdated] = function(...) self:OnTotemSetDaoEvent(...) end,
+		[Dao.Events.EntityCreated] = function(...) self:OnTotemSetDaoEvent(...) end,
+		[Dao.Events.EntityDeleted] = function(...) self:OnTotemSetDaoEvent(...) end,
 	})
 end
 
@@ -267,21 +269,75 @@ function Toolbox:OnTotemEvent(event, totem)
 	end
 end
 
+--- @param eventDetail EventDetail
+--- @return boolean
+Toolbox.ActiveTotemSetPredicate = function(eventDetail)
+	if not eventDetail then
+		return false
+	end
+
+	-- support id lookup through entity or extra detail (setId)
+	local id = Util.Objects.IsTable(eventDetail.entity) and eventDetail.entity.id or nil
+	if not id then
+		local extra = unpack(eventDetail.extra)
+		id = Util.Objects.IsTable(extra) and extra.setId or id
+	end
+
+	return Util.Strings.Equal(id, Toolbox:GetActiveTotemSetId())
+end
+
+--- @param eventDetail EventDetail
+--- @return boolean
+Toolbox.ExtraDetailPredicate = function(eventDetail, ...)
+	if not eventDetail then
+		return false
+	end
+
+	local extra = unpack(eventDetail.extra)
+	--Logging:Debug("%s", Util.Objects.ToString(extra))
+	if Util.Objects.IsTable(extra) then
+		local count	= 0
+		for _, attr in Util.Objects.Each(...) do
+			--Logging:Debug("%s = %s", tostring(attr), tostring(Util.Tables.ContainsKey(extra, attr)))
+			if Util.Tables.ContainsKey(extra, attr) then
+				count = count + 1
+			end
+		end
+		return count == select('#', ...)
+	end
+
+	return false
+end
+
 function Toolbox:OnTotemSetDaoEvent(event, eventDetail)
 	Logging:Debug("OnTotemSetDaoEvent(%s) : %s", event, Util.Objects.ToString(eventDetail))
-
 	-- don't care about event if the totem bar isn't visible
 	if not self.totemBar then return end
 
-	-- there may be extra detail on the event which designates what totem bar button to update
-	local extra = unpack(eventDetail.extra)
-	if Util.Objects.IsTable(extra) and Util.Objects.IsNumber(extra.element) and Util.Objects.IsSet(extra.spell) then
-		self.totemBar:OnSpellSelected(extra.element, extra.spell)
-	-- emulated DOA event via OnConfigChanged(), only as a result of active set id being changed
-	elseif Util.Objects.IsTable(extra) and Util.Objects.IsString(extra.setId) then
-		self.totemBar:OnSetActivated(extra.setId)
-	else
-		Logging:Warn("OnTotemSetDaoEvent() : NOT IMPLEMENTED")
+	-- update
+	if Util.Strings.Equal(event, Dao.Events.EntityUpdated) then
+		if self.ActiveTotemSetPredicate(eventDetail) then
+			local extra = unpack(eventDetail.extra)
+			-- if the totems change for set, just iterate each one (only 4)
+			-- if the spell is the same, it's a noop
+			if Util.Strings.Equal(eventDetail.attr, 'totems') then
+				for _, button in pairs(self.totemBar:GetButtons()) do
+					button:OnSpellSelected(eventDetail.entity:GetSpell(button.element))
+				end
+			-- emulated DOA event via OnConfigChanged(), only as a result of active set id being changed
+			elseif self.ExtraDetailPredicate(eventDetail, 'setActivated') then
+				self.totemBar:OnSetActivated(extra.setId)
+			end
+		end
+
+		if Util.Objects.In(eventDetail.attr, 'name', 'icon') then
+			self.totemBar:OnSetUpdated()
+		end
+	-- create/delete
+	elseif Util.Objects.In(event, Dao.Events.EntityCreated, Dao.Events.EntityDeleted) then
+		self.totemBar:OnSetUpdated()
+
+		-- todo : active totem set deleted
 	end
 end
 
@@ -294,10 +350,9 @@ function Toolbox:OnConfigChanged(_, message)
 		-- the active totem set has changed
 		if Util.Strings.Equal(path, "activeSet") then
 			-- this is a simulated event, where we specify the set id which was activated
-			self:OnTotemSetDaoEvent(Dao.Events.EntityUpdated, { extra = {{setId = value}} })
+			self:OnTotemSetDaoEvent(Dao.Events.EntityUpdated, { extra = {{setId = value, setActivated = true}} })
 		end
 	end
-
 end
 
 function Toolbox:OnEnterCombat()
@@ -390,6 +445,8 @@ function Toolbox:GetElementIndex(element)
 	return Util.Objects.Default(index, 0) > 0 and index or element
 end
 
+--- this is only intended to be called through drag and drop via the totem bar, which implicitly already has the totems
+--- in the correct order when this is called (as it uses that order to update the totem set)
 function Toolbox:SetElementIndices()
 	if self.totemBar then
 		local ordering =
@@ -425,15 +482,3 @@ function Toolbox:LaunchpadSupplements()
 		{L["totem_set"], function(container) self:LayoutTotemSetInterface(container) end , false},
 	}
 end
-
---[[
-function Toolbox:CastByElement(element)
-	element = tonumber(Util.Objects.Default(element, "0"))
-	Logging:Trace("CastByElement(%s)", element)
-	if self.totemBar and (element > 0 and element < C.MaxTotems) then
-		local macro = self.totemBar:GetMacro(element)
-		Logging:Trace("CastByElement(%s): %s", element, Util.Objects.ToString(macro))
-		macro:Click("LeftButton", false)
-	end
-end
---]]

@@ -384,6 +384,12 @@ function TotemSet:Set(element, order, spell)
 	self:SetSpell(element, spell)
 end
 
+
+function TotemSet:GetSpell(element)
+	local _, spell = self:Get(element)
+	return spell
+end
+
 --- @return number, Models.Spell.Spell
 function TotemSet:Get(element)
 	local data = self.totems[element]

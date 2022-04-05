@@ -308,6 +308,10 @@ function TotemBar:OnSetActivated(id)
 	end
 end
 
+function TotemBar:OnSetUpdated()
+	self.setButton.bar:UpdateButtons()
+end
+
 -- TotemBar END --
 
 local function GetKeyBindNamePattern(type)
@@ -606,6 +610,12 @@ function TotemButton:OnSpellSelected(spell)
 		"OnSpellSelected(%d) : %s (in combat) %s (totem) %s (spell)",
 		self.element, tostring(inCombat), tostring(totem), tostring(spell)
 	)
+
+	local currentSpell = Util.Objects.Default(self._:GetAttribute("spell"), -1)
+	if currentSpell == spell.id then
+		Logging:Info("OnSpellSelected(%d) : spell has not changed, donig nothing", spell.id)
+		return
+	end
 
 	-- if we're in combat, don't modify any state until we exit combat
 	-- just show the selection as pending
@@ -1659,7 +1669,7 @@ function Toolbox:SetupKeyBindDisplay()
 	if self.totemBar then
 		local function SetKeyBindNames(names)
 			for name, description in pairs(names) do
-				Logging:Debug("%s => %s", name, description)
+				Logging:Trace("%s => %s", name, description)
 				_G[C.KeyBinds.PrefixName .. name] = description
 			end
 		end

@@ -23,6 +23,7 @@ function FrameClass:New(name)
     self.text = nil
     self.type = nil
     self.textures = {}
+    self.refs = {}
     self.id = nextid()
     self[0] = "(userdata)"
     return self
@@ -44,7 +45,6 @@ end
 function FrameClass:SetToplevel(top)
 
 end
-
 
 function FrameClass:GetObjectType()
     return "Frame"
@@ -199,7 +199,9 @@ function FrameClass:SetBackdrop(bgFile, edgeFile, tile, tileSize, edgeSize, inse
 end
 
 function FrameClass:CreateFontString(name, layer, inheritsFrom)
-    return CreateFrame("FontString", name)
+    local f = CreateFrame("FontString", name)
+    f.SetVertexColor = function()  end
+    return f
 end
 
 function FrameClass:SetWidth(width)
@@ -385,11 +387,18 @@ function FrameClass:SetShown(...) end
 
 function FrameClass:SetDontSavePosition(...) end
 
+function FrameClass:SetFrameRef(name, frame)
+    self.refs[name] = frame
+end
+
+function FrameClass:GetFrameStrata() return nil end
+
+function FrameClass:SetDrawLayer(layer) end
+
 function CreateFrame(kind, name, parent, template)
     local frame = FrameClass:New(name)
     frame.type = kind
     frame.parent = parent
-
 
     if kind == 'Button' then
         frame.Click = function(self)  end
@@ -414,6 +423,10 @@ function CreateFrame(kind, name, parent, template)
     elseif kind == 'EditBox' then
         frame.SetEnabled = function(self, enabled)  end
         frame.HasFocus = function(self) return true  end
+    elseif kind =="StatusBar" then
+        frame.SetStatusBarTexture = function() end
+        frame.SetStatusBarColor = function() end
+        frame.SetRotatesTexture = function()  end
     end
 
     if template then
@@ -435,8 +448,14 @@ function CreateFrame(kind, name, parent, template)
         elseif template == "GameTooltipTemplate" then
             frame.AddDoubleLine = function() end
             frame.AddLine = function() end
+        elseif template == "CooldownFrameTemplate" then
+            frame.SetReverse = function()  end
+
         end
     end
+
+    frame.GetPoint = function() return nil end
+    frame.WrapScript = function()  end
 
     tinsert(frames, frame)
     frame.index = #frames
@@ -520,6 +539,8 @@ function TextureClass:GetWidth() return 100 end
 
 function TextureClass:SetShown(...)  end
 
+function TextureClass:GetPoint() return nil end
+
 function CreateTexture(name, texture, texturePath, parent)
     local tex = TextureClass:New(name)
     tex.texture = texture
@@ -574,7 +595,6 @@ function CreateAnimation(type, name)
     return a
 end
 
-
 function WoWAPI_FireEvent(event,...)
     for _, frame in pairs(frames) do
         if frame.events[event] then
@@ -604,7 +624,6 @@ function WoWAPI_FireUpdate(forceNow)
     end
 end
 
-
 function PanelTemplates_TabResize() end
 function PanelTemplates_DeselectTab() end
 function PanelTemplates_SelectTab() end
@@ -625,3 +644,9 @@ function FauxScrollFrame_OnVerticalScroll(...) end
 function CreateVector2D()
 	return {}
 end
+
+function GetBindingKey()  end
+
+_G.TextStatusBarText = {
+    GetFont = function(self)  end
+}

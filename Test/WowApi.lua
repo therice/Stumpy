@@ -355,7 +355,7 @@ local PlayerToGuid = {
         guid = "Player-1-00000001",
         name = "Player1-Realm1",
         realm = "Realm1",
-        class = "WARRIOR"
+        class = "SHAMAN"
     },
     Player2 = {
         guid = "Player-1-00000002",
@@ -444,6 +444,24 @@ end
 
 function UnitPosition(unit)
     return 0, 0, 0, 531
+end
+
+-- https://wowwiki-archive.fandom.com/wiki/API_GetTalentInfo
+function GetTalentInfo(tabIndex , talentIndex , inspect)
+    return nil, nil, 3, 3, 1, 1
+end
+
+-- https://wowwiki-archive.fandom.com/wiki/API_GetTotemInfo
+function GetTotemInfo(element)
+    return false, nil, nil, nil
+end
+
+function GetMacroInfo(index)
+    return nil, nil, nil
+end
+
+function GetMacroIcons()
+    return {}
 end
 
 function Ambiguate(name, context)

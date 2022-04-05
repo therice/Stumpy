@@ -209,7 +209,7 @@ local Macros = AddOn.Instance(
 )
 
 function Macros:LoadAndParse()
-	Logging:Debug("LoadAndParse(")
+	Logging:Debug("LoadAndParse()")
 	for index = 1, MaxMacros do
 		local _, _, body = GetMacroInfo(index)
 		-- Logging:Debug("LoadAndParse(%d) : %s", index, tostring(body))

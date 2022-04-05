@@ -5,6 +5,9 @@ exclude = {
     -- explicitly exclude libs as there are libs we have authored where coverage is useful
     "Libs/Ace.*",
     "Libs/CallbackHandler.*",
+    "Libs/HereBeDragons.*",
+    "Libs/LibRangeCheck.*",
+    "Libs/LibSHA.*",
     "Libs/lib%-st.*",
     "Libs/LibBabble.*",
     "Libs/LibBase64.*",

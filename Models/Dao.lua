@@ -223,3 +223,7 @@ function Dao:Remove(entity, fireCallbacks, ...)
 	end
 end
 
+
+if AddOn._IsTestContext() then
+	Dao.EventDetail = EventDetail
+end

@@ -425,7 +425,11 @@ end
 function Spells:IsLoaded()
 	local spellCount, uncachedCount = Util.Tables.Count(self.spells.byId),  Util.Tables.Count(self.spells.uncached)
 	Logging:Trace("IsLoaded() : %d (spells) %d (uncached)", spellCount, uncachedCount)
-	return spellCount > 0 and uncachedCount == 0
+	if AddOn._IsTestContext() then
+		return true
+	else
+		return spellCount > 0 and uncachedCount == 0
+	end
 end
 
 function Spells:Enable(load)
