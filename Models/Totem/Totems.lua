@@ -498,6 +498,7 @@ function AffectedUnitTimer:_Evaluate(totem)
 				-- the unit is both a candidate and eligible, so increment the affected count
 				candidates = candidates + 1
 				-- if there is an aura, check that first
+				-- todo : check if not weapon enchant
 				if aura:isPresent() and AddOn.IsUnitAffectedBySpell(unit, aura:get()) then
 					affected = affected + 1
 				-- otherwise, check whether the unit is in range
@@ -513,11 +514,12 @@ function AffectedUnitTimer:_Evaluate(totem)
 								Logging:Trace(
 									"_Evaluate(%s, %s) : %d, %d (totem) %d, %d (player) %d (range)",
 									tostring(totem), unit,
-									tonumber(totemX), tonumber(totemY), tonumber(unitX), tonumber(unitY),
-									tonumber(range)
+									tonumber(totemX) or -1, tonumber(totemY) or -1,
+									tonumber(unitX) or -1, tonumber(unitY) or -1,
+									tonumber(range) or -1
 								)
 								local distance = HBD:GetWorldDistance(zone, totemX, totemY, unitX, unitY)
-								Logging:Trace( "_Evaluate(%s, %s) : %.2f (distance)", tostring(totem), unit, tonumber(distance))
+								Logging:Trace( "_Evaluate(%s, %s) : %.2f (distance)", tostring(totem), unit, tonumber(distance) or -1)
 
 								if distance and distance <= range then
 									affected = affected + 1

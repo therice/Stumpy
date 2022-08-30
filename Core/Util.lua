@@ -12,8 +12,6 @@ local Player = AddOn.ImportPackage('Models').Player
 --- @type LibTotem
 local LibTotem = AddOn:GetLibrary("Totem")
 
-local RangeCheck = AddOn:GetLibrary("RangeCheck")
-
 --- @class Core.Mode
 local Mode = AddOn.Package('Core'):Class('Mode', Bitfield)
 function Mode:initialize()
@@ -127,27 +125,6 @@ function AddOn:GroupIterator(reversed, forceParty)
 		end
 		i = i + (reversed and -1 or 1)
 		return ret
-	end
-end
-
-function AddOn:CheckRange(unit, range, operator)
-	local min, max = RangeCheck:GetRange(unit, true)
-	if not Util.Objects.IsNumber(range) then
-		range = tonumber(range)
-	end
-
-	if not range then
-		return nil
-	end
-
-	if (operator == "<=") then
-		return (max or 999) <= range
-	elseif (operator == "<") then
-		return (max or 999) < range
-	elseif (operator == ">") then
-		return (min or 0) > range
-	else
-		return (min or 0) >= range
 	end
 end
 

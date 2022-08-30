@@ -130,6 +130,7 @@ end
 
 function TotemBar:_CreateFrame()
 	local f = CreateFrame('Frame', AddOn:Qualify('TotemBar'), UIParent, "BackdropTemplate,SecureHandlerBaseTemplate")
+	f:SetFrameStrata('DIALOG')
 	local storage = AddOn.db and Util.Tables.Get(AddOn.db.profile, 'ui.TotemBar') or {}
 	f:EnableMouse(true)
 	f:SetScale(storage.scale)
@@ -413,10 +414,13 @@ function TotemButton:_CreateFrame()
 	button.pending:Hide()
 
 	button.cooldown = CreateFrame('Cooldown', button:GetName() .. '_Cooldown', button, 'CooldownFrameTemplate')
-	button.cooldown:SetAllPoints()
+	button.cooldown:SetDrawBling(true)
+	button.cooldown:SetDrawEdge(true)
+	button.cooldown:SetHideCountdownNumbers(false)
 	button.cooldown:SetReverse(true)
-	button.cooldown:SetFrameStrata(button:GetFrameStrata())
-	button.cooldown:SetFrameLevel(button:GetFrameLevel() + 2)
+	button.cooldown:SetFrameStrata('FULLSCREEN')
+	--button.cooldown:SetFrameLevel(button:GetFrameLevel() + 2)
+	--button.cooldown:SetAllPoints()
 	UI.SetInside(button.cooldown)
 
 	button.hotKey = button:CreateFontString(nil, "ARTWORK", "NumberFontNormalSmallGray")
@@ -513,9 +517,12 @@ end
 function TotemButton:UpdateCooldown()
 	local totem = Totems():Get(self.element)
 	if totem:IsPresent() then
-		CooldownFrame_Set(self._.cooldown, totem:GetStartTime(), totem:GetDuration(), 1, true, 1)
+		--CooldownFrame_Set(self._.cooldown, totem:GetStartTime(), totem:GetDuration(), 1, true, 1)
+		self._.cooldown:SetCooldown(totem:GetStartTime(), totem:GetDuration(), 1)
+
 	else
-		CooldownFrame_Clear(self._.cooldown)
+		--CooldownFrame_Clear(self._.cooldown)
+		self._.cooldown:Clear()
 	end
 end
 
