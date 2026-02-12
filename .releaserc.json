@@ -50,7 +50,7 @@
 			"changelogFile": "CHANGELOG.md"
 		}],
 		["@semantic-release/exec",{
-			"prepareCmd": "python3 $TRAVIS_BUILD_DIR/.tools/relnotes.py -i $TRAVIS_BUILD_DIR/CHANGELOG.md -o $TRAVIS_BUILD_DIR/Changelog.lua",
+            "prepareCmd": "python3 $BUILD_DIR/.tools/relnotes.py -i $BUILD_DIR/CHANGELOG.md -o $BUILD_DIR/Changelog.lua",
 			"successCmd": "curl -s https://raw.githubusercontent.com/therice/BigWigsMods-packager/master/release.sh | bash  -s -- -T -g \"bcc\""
 		}],
 		["@semantic-release/git", {
