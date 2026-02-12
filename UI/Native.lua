@@ -254,17 +254,26 @@ function Widget.LayerBorder(parent, size, cR, cG, cB, cA, outside, layer)
     right:Show()
 
 
-    parent.SetBorderColor = function(self, cR, cG, cB, cA, layer)
-        layer = Util.Objects.Default(layer, "")
-        local top, bottom, left, right =
-            GetLayerBorder("Top", self), GetLayerBorder("Bottom", self),
-            GetLayerBorder("Left", self), GetLayerBorder("Right", self)
-
-        top:SetColorTexture(cR, cG, cB, cA)
-        bottom:SetColorTexture(cR, cG, cB, cA)
-        left:SetColorTexture(cR, cG, cB, cA)
-        right:SetColorTexture(cR, cG, cB, cA)
+    parent.SetBorderColor = function(_, cR, cG, cB, cA)
+	    top:SetColorTexture(cR, cG, cB, cA)
+	    bottom:SetColorTexture(cR, cG, cB, cA)
+	    left:SetColorTexture(cR, cG, cB, cA)
+	    right:SetColorTexture(cR, cG, cB, cA)
     end
+
+	parent.HideBorders = function(_)
+		top:Hide()
+		bottom:Hide()
+		left:Hide()
+		right:Hide()
+	end
+
+	parent.ShowBorder = function(self, position)
+		local border = GetLayerBorder(position, self)
+		if border then
+			border:Show()
+		end
+	end
 end
 
 function Widget.Shadow(parent, size, edgeSize)
@@ -348,6 +357,22 @@ function Widget.ShadowInside(self, enableBorder, enableLine)
     end
 end
 
+Widget.Textures = {
+	SetGradientAlpha = function(texture, orientation, ...)
+		--Logging:Trace("SetGradientAlpha(%s) : %s", orientation, Util.Objects.ToString({...}))
+
+		if texture and Util.Objects.IsTable(texture) and (Util.Objects.IsFunction(texture['SetGradientAlpha']) or Util.Objects.IsFunction(texture['SetGradient'])) then
+			if AddOn.BuildInfo:IsWrathP1() then
+				texture:SetGradientAlpha(orientation, ...)
+			else
+				local args = {...}
+				local c1 = Util.Objects.IsTable(args[1]) and args[1] or CreateColor(args[1], args[2], args[3], args[4])
+				local c2 = Util.Objects.IsTable(args[2]) and args[2] or CreateColor(args[5], args[6], args[7], args[8])
+				texture:SetGradient(orientation, c1, c2)
+			end
+		end
+	end
+}
 
 do
     local function SetPoint(self, arg1, arg2, arg3, arg4, arg5)
@@ -378,7 +403,13 @@ do
         return self
     end
 
-    local function SetSize(self, ...)
+	local function SetAllPoints(self, relativeTo, doResize)
+		self:SetAllPoints(relativeTo, doResize)
+		return self
+	end
+
+	
+	local function SetSize(self, ...)
         --Logging:Debug("Native.SetSize(%s) : %s", tostring(self:GetName()), Util.Objects.ToString(Util.Tables.New(...)))
         self:SetSize(...)
         return self
@@ -511,6 +542,7 @@ do
         self.Point              = SetPoint
         self.Size               = SetSize
         self.NewPoint           = SetNewPoint
+	    self.AllPoints          = SetAllPoints
         self.Scale              = SetScale
         self.OnClick            = OnClick
         self.OnShow             = OnShow

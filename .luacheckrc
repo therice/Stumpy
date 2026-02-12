@@ -80,6 +80,7 @@ read_globals = {
 	"GameFontHighlightSmallLeft",
 	"GameFontNormal",
 	"GetAddOnMetadata",
+	"GetBuildInfo",
 	"GetBindingKey",
 	"GetContainerNumFreeSlots",
 	"GetGuildRosterInfo",

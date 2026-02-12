@@ -81,7 +81,8 @@ AddOn.Constants = {
     },
 
     Events = {
-        LearnedSpellInTab      = "LEARNED_SPELL_IN_TAB",
+	    -- Not present in TBC Anniv 2026
+        -- LearnedSpellInTab      = "LEARNED_SPELL_IN_TAB",
         PlayerEnteringWorld    = "PLAYER_ENTERING_WORLD",
         PlayerLogin            = "PLAYER_LOGIN",
         PlayerRegenDisabled    = "PLAYER_REGEN_DISABLED",

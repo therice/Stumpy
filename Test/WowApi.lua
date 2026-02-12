@@ -236,14 +236,6 @@ function GetServerTime()
     return os.time()
 end
 
-function GetAddOnMetadata(name, attr)
-    if string.lower(attr) == 'version' then
-        return "2021.1.0-dev"
-    else
-        return nil
-    end
-end
-
 function GetAddOnInfo()
     return
 end
@@ -261,6 +253,12 @@ function GuildRoster ()
     end
 end
 
+function GetBuildInfo()
+	return "2.5.5", "65795", "Feb 5 2025", 20505, "", "", 20505
+	-- return "3.4.1", 47612, "Jan 11 2023", 30401
+	-- return "4.4.0", "55262", "Jun 20 2024", 40400, "40400", nil
+	-- return "5.5.0", "62258", "Jul 25 2025", 50500, "", "", 50500
+end
 function IsInGuild() return 1 end
 
 function IsInRaid() return _G.IsInRaidVal end
@@ -973,6 +971,7 @@ function GetItemSubClassInfo(classId, subClassId)
     return ""
 end
 
-loadfile('Test/WowItemInfo.lua')()
 loadfile('Test/WowApiUI.lua')()
+loadfile('Test/API/loader.lua')()
+loadfile('Test/WowItemInfo.lua')()
 

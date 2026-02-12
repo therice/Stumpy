@@ -8,15 +8,22 @@ local Util = AddOn:GetLibrary("Util")
 --- @class Logging
 local Logging = AddOn:NewModule("Logging")
 
-local accum
+local accum = {}
 if not AddOn._IsTestContext() then
-    accum = {}
     Log:SetWriter(
         function(msg)
             Util.Tables.Push(accum, msg)
         end
     )
 end
+
+Logging.defaults = {
+	profile = {
+		history = {
+
+		}
+	}
+}
 
 local LoggingLevels = {
     [Log:GetThreshold(Log.Level.Disabled)] = Log.Level.Disabled,
@@ -30,19 +37,18 @@ local LoggingLevels = {
 
 function Logging:OnInitialize()
     Log:Debug("OnInitialize(%s)", self:GetName())
+	self:BuildFrame()
+	--@debug@
+	-- self:Toggle()
+	--@end-debug@
 end
 
 function Logging:OnEnable()
     Log:Debug("OnEnable(%s)", self:GetName())
-
-    self:BuildFrame()
     if not AddOn._IsTestContext() then
         self:SwitchDestination(accum)
-        accum = nil
+	    Util.Tables.Wipe(accum)
     end
-    --@debug@
-    self:Toggle()
-    --@end-debug@
 end
 
 function Logging:EnableOnStartup()

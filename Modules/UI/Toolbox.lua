@@ -754,7 +754,7 @@ function TotemFlyoutButton:_CreateFrame()
 	button.text:SetTextColor(C.Colors.LuminousYellow:GetRGB())
 	button.Texture:SetColorTexture(C.Colors.MageBlue:GetRGB())
 	button.HighlightTexture:SetColorTexture(C.Colors.MageBlue:GetRGB())
-	button.HighlightTexture:SetGradientAlpha("VERTICAL", 0.05, 0.06, 0.09, 1, 0.20, 0.21, 0.25, 1)
+	BaseWidget.Textures.SetGradientAlpha(button.HighlightTexture, "VERTICAL", 0.05, 0.06, 0.09, 1, 0.20, 0.21, 0.25, 1)
 	button:RegisterForClicks("LeftButtonDown")
 
 	-- this is all about showing/hiding flyouts
@@ -1092,7 +1092,7 @@ function TotemSetButton:_CreateFrame()
 	local button = UI:NewNamed('Button', self.parent:GetFrame(), self:GetName(), nil, "BackdropTemplate,SecureHandlerClickTemplate, SecureHandlerStateTemplate")
 	button.Texture:SetColorTexture(C.Colors.Cream:GetRGB())
 	button.HighlightTexture:SetColorTexture(C.Colors.Cream:GetRGB())
-	button.HighlightTexture:SetGradientAlpha("VERTICAL", 0.05, 0.06, 0.09, 1, 0.20, 0.21, 0.25, 1)
+	BaseWidget.Textures.SetGradientAlpha(button.HighlightTexture, "VERTICAL", 0.05, 0.06, 0.09, 1, 0.20, 0.21, 0.25, 1)
 	button:RegisterForClicks("LeftButtonDown")
 
 	-- for any pending activation of a totem set

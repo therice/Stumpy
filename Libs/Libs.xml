@@ -26,10 +26,10 @@
     <Include file="LibDataBroker-1.1\LibDataBroker-1.1.xml"/>
     <Include file="LibDBIcon-1.0\LibDBIcon-1.0.xml"/>
     <Include file="LibDialog-1.0\LibDialog-1.0.xml" />
-    <Script file="LibWindow-1.1\LibWindow-1.1.lua" />
+    <Include file="LibWindow-1.2\LibWindow-1.2.xml" />
     <Include file="MSA-DropDownMenu-1.0\MSA-DropDownMenu-1.0.xml" />
     <Include file="LibJSON-1.0\LibJSON-1.0.xml" />
     <Include file="HereBeDragons-2.0\HereBeDragons-2.0.xml" />
-    <Include file="LibRangeCheck-2.0\LibRangeCheck-2.0.xml" />
+    <Include file="LibRangeCheck-3.0\LibRangeCheck-3.0.xml" />
     <Include file="LibTotem-1.0\LibTotem-1.0.xml" />
 </Ui>

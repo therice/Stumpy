@@ -12,6 +12,8 @@ local UI = AddOn.Require('UI.Native')
 local BaseWidget = AddOn.ImportPackage('UI.Native').Widget
 --- @type LibTotem
 local LibTotem = AddOn:GetLibrary("Totem")
+--- @type LibWindow
+local Window = AddOn:GetLibrary('Window')
 
 -- generic build entry attributes
 --- @class UI.Util.Attributes
@@ -427,4 +429,62 @@ function U.ToShortKey(key)
         --Logging:Debug("ToShortKey() : %s", key)
         return key
     end
+end
+
+local _MinimizePrototype = {
+	minimized = false,
+	IsMinimized = function(f)
+		return f.minimized
+	end,
+	Minimize = function(f)
+		if not f.minimized then
+			if f.content then f.content:Hide() else f:Hide() end
+			if f.border then f.border:Hide() end
+			if f.HideShadow then f:HideShadow() end
+			f.minimized = true
+		end
+	end,
+	Maximize = function(f)
+		if f.minimized then
+			if f.content then f.content:Show() else f:Show() end
+			if f.border then f.border:Show() end
+			if f.ShowShadow then f:ShowShadow() end
+			f.minimized = false
+		end
+	end,
+	OnMouseUp = function(f)
+		if f.lastClick and GetTime() - f.lastClick <= 0.5 then
+			f.lastClick = nil
+			if f:IsMinimized() then
+				f:Maximize()
+			else
+				f:Minimize()
+			end
+		else
+			f.lastClick = GetTime()
+		end
+	end
+}
+
+function U.EmbedMinimizeSupport(f)
+	for field, obj in pairs(_MinimizePrototype) do
+		f[field] = obj
+	end
+end
+
+
+function U.EmbedExtras(f, storageFn)
+	if f and Util.Objects.IsFunction(storageFn) then
+		f.GetStorage = storageFn
+
+		local storage = f:GetStorage()
+		f:SetScale(storage.scale)
+
+		Window:Embed(f)
+
+		f:RegisterConfig(storage)
+		f:RestorePosition()
+		f:RestoreDimensions()
+		f:MakeDraggable()
+	end
 end

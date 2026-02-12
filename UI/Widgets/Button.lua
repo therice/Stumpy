@@ -48,7 +48,7 @@ function Button:Create()
 
     b.Texture = b:CreateTexture(nil,"BACKGROUND")
     b.Texture:SetColorTexture(1,1,1,1)
-    b.Texture:SetGradientAlpha("VERTICAL",0.05,0.06,0.09,1, 0.20,0.21,0.25,1)
+	BaseWidget.Textures.SetGradientAlpha(b.Texture, "VERTICAL",0.05,0.06,0.09,1, 0.20,0.21,0.25,1)
     b.Texture:SetPoint("TOPLEFT")
     b.Texture:SetPoint("BOTTOMRIGHT")
 

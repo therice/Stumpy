@@ -517,6 +517,8 @@ function TextureClass:SetDesaturated(saturated) end
 
 function TextureClass:SetGradientAlpha() end
 
+function TextureClass:SetGradient(...) end
+
 function TextureClass:SetAlpha() end
 
 function TextureClass:SetSize() end

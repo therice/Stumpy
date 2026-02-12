@@ -439,7 +439,8 @@ function Spells:Enable(load)
 		Logging:Debug("Enable()")
 		self.subscriptions = Event():BulkSubscribe({
            [C.Events.SpellsChanged] = function(...) OnSpellsChanged(self, ...) end,
-           [C.Events.LearnedSpellInTab] = function(...) OnSpellsChanged(self, ...) end
+           -- Moved into SPELLS_CHANGED with TBC (at least Anniversary 2026 version)
+           -- [C.Events.LearnedSpellInTab] = function(...) OnSpellsChanged(self, ...) end
        })
 
 		if load then

@@ -9,9 +9,9 @@ _G[AddOnName] = AddOn
 
 -- just capture version here, it will be turned into semantic version later
 -- as we don't have access to that model yet here
-AddOn.version = GetAddOnMetadata(AddOnName, "Version")
-AddOn.author = GetAddOnMetadata(AddOnName, "Author")
-AddOn.title = GetAddOnMetadata(AddOnName, 'Title')
+AddOn.version = AddOn.C_AddOns.GetAddOnMetadata(AddOnName, "Version")
+AddOn.author = AddOn.C_AddOns.GetAddOnMetadata(AddOnName, "Author")
+AddOn.title = AddOn.C_AddOns.GetAddOnMetadata(AddOnName, 'Title')
 
 _G[format('%s%s', AddOn.Constants.KeyBinds.PrefixHeader, AddOnName:upper())] = AddOn.title
 
@@ -48,13 +48,13 @@ do
     AddOn:AddLibrary('AceConfigCmd', 'AceConfigCmd-3.0')
     AddOn:AddLibrary('AceConfigDialog', 'AceConfigDialog-3.0')
     AddOn:AddLibrary('AceConfigRegistry', 'AceConfigRegistry-3.0')
-    AddOn:AddLibrary('Window', 'LibWindow-1.1')
+    AddOn:AddLibrary('Window', 'LibWindow-1.2')
     AddOn:AddLibrary('Dialog', 'LibDialog-1.0')
     AddOn:AddLibrary('DataBroker', 'LibDataBroker-1.1')
     AddOn:AddLibrary('DbIcon', 'LibDBIcon-1.0')
     AddOn:AddLibrary('JSON', 'LibJSON-1.0')
     AddOn:AddLibrary('HereBeDragons', 'HereBeDragons-2.0')
-    AddOn:AddLibrary('RangeCheck', 'LibRangeCheck-2.0')
+    AddOn:AddLibrary('RangeCheck', 'LibRangeCheck-3.0')
     AddOn:AddLibrary('Deformat', 'LibDeformat-3.0')
     AddOn:AddLibrary('Totem', 'LibTotem-1.0')
 end
