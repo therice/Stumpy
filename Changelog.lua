@@ -2,6 +2,9 @@
 local _, AddOn = ...
 
 AddOn.Changelog = [=[
+2026.0.0 (2026-02-12)
+* Increment version to be aligned with year 4458ac1
+
 2022.1.0 (2026-02-12)
 * First update for TBC Anniversary 11905ae
 * Fix release note generator 82444b3
