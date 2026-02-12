@@ -2,6 +2,12 @@
 local _, AddOn = ...
 
 AddOn.Changelog = [=[
+2022.1.0 (2026-02-12)
+* First update for TBC Anniversary 11905ae
+* Fix release note generator 82444b3
+* Use GitHub actions for build 9565c0c
+* Update TOC for TBC Anniversary 583c274
+
 2022.0.7 (2022-04-05)
 * update totem bar as totem set(s) are udpated via config UI (doesn't support deletion of active set currently) db96271
 
