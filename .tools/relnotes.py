@@ -13,7 +13,7 @@ def process(input_file, output_file):
     logging.debug('Reading %s', input_file)
 
     with open(input_file, mode='r', encoding="utf-8") as source:
-         text = source.read()
+        text = source.read()
 
     logging.debug('Processing %s', input_file)
 
@@ -68,7 +68,7 @@ def main(argv):
 
     for opt, arg in opts:
         if opt in ("-i"):
-             input_file = arg
+            input_file = arg
         elif opt in ("-o"):
             output_file = arg
 
@@ -79,4 +79,4 @@ def main(argv):
     process(input_file, output_file)
 
 if __name__ == "__main__":
-   main(sys.argv[1:])
+    main(sys.argv[1:])
