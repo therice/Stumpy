@@ -373,11 +373,30 @@ function TotemButton:GetName()
 	return Util.Strings.Join('_', self.parent:GetFrameName(), 'Totem' .. tostring(self.element))
 end
 
+function TotemButton:_SetSpellAttributes(spellId)
+	if not Util.Objects.IsEmpty(spellId) then
+		local button = self._
+		-- GetSpellInfo = name, iconID, originalIconID, castTime, minRange, maxRange, spellId
+		-- GetSpellInfo(10437) => "Searing Totem", nil, 135825, 0, 0, 0, 10437
+		local spellName = select(1, GetSpellInfo(spellId))
+		Logging:Debug("_SetSpellAttribute() : spellId=%s, spellName=%s", tostring(spellId), tostring(spellName))
+		button:SetAttribute("spellname", spellName)
+		button:SetAttribute("spellid", spellId)
+		button:SetAttribute("macrotext", "/cast " .. spellName)
+		--button:SetAttribute("*spell1", spellName)
+		--button:SetAttribute("spell1", spellName)
+		--button:SetAttribute("spell", spellName)
+		--button:SetAttribute("macrotext1", "/cast " .. spellName)
+		--button:SetAttribute("inactive", false)
+	end
+end
+
 function TotemButton:GetSpellId()
-	local spellId = self._:GetAttribute("spell")
+	local spellId = self._:GetAttribute("spellid")
 	return spellId and tonumber(spellId) or nil
 end
 
+--- @return Models.Spell.Spell
 function TotemButton:GetSpell()
 	local spellId = self:GetSpellId()
 	if spellId then
@@ -397,12 +416,62 @@ function TotemButton:GetSpellName()
 	return nil
 end
 
+--[[
+local tc = false
+function TotemButton:_CreateTestFrame()
+	if not tc then
+		-- Create a plain, non-secure button for testing
+		local button = CreateFrame("Button", self:GetName() .. "_Test", UIParent, "BackdropTemplate, SecureActionButtonTemplate")
+		button:SetID(10000 + self.element)
+		button:SetSize(50, 50)
+		button:SetPoint("CENTER")
+		button:EnableMouse(true)
+		button:RegisterForClicks("AnyDown")
+		button:Show()
+
+		button:SetBackdrop(ButtonTexture)
+		button:SetBackdropColor(0, 0, 0, 1)
+
+		button:SetAttribute("type", "macro")
+		button:SetAttribute("macrotext", "/cast Searing Totem")
+
+		--button:SetAttribute("totem-slot", self.element)
+		--button:SetAttribute("*type2", "macro")
+		button:SetAttribute("type2", "macro")
+		--button:SetAttribute("totem-slot", self.element)
+		--button:SetAttribute("*macrotext2", string.format("/script DestroyTotem(%d)", self.element))
+		button:SetAttribute("macrotext2", string.format("/script DestroyTotem(%d)", self.element))
+
+		-- Optional: show the button name in the center
+		local label = button:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+		label:SetPoint("CENTER")
+		label:SetText(self:GetName())
+
+		button:SetScript("PreClick", function(self, buttonClicked)
+			print("DEBUG PreClick:", self:GetName(), "button:", buttonClicked)
+			print("DEBUG attributes at click:",
+			      "type=", self:GetAttribute("type1"),
+			      "macrotext=", self:GetAttribute("macrotext1")
+			)
+		end)
+		button:SetScript("OnAttributeChanged", function(...) self:OnAttributeChanged(...) end)
+
+		tc = true
+
+	end
+end
+--]]
 function TotemButton:_CreateFrame()
-	local button = CreateFrame('Button', self:GetName(), self.parent:GetFrame(), "BackdropTemplate,SecureHandlerBaseTemplate,SecureHandlerStateTemplate,SecureActionButtonTemplate")
+	local button = CreateFrame(
+		'Button', self:GetName(), self.parent:GetFrame(),
+		"BackdropTemplate,SecureHandlerBaseTemplate,SecureHandlerStateTemplate,SecureActionButtonTemplate"
+	)
+	button:SetID(self.element)
 	button:SetBackdrop(ButtonTexture)
 	button:SetBackdropColor(0, 0, 0, 1)
 	button:SetBackdropBorderColor(0, 0, 0, 1)
-	button:SetID(self.element)
+	button:EnableMouse(true)
+	button:RegisterForClicks("AnyDown")
 
 	button.icon = button:CreateTexture(nil, 'ARTWORK')
 	button.icon:SetTexCoord(unpack({0.08, 0.92, 0.08, 0.92}))
@@ -433,16 +502,24 @@ function TotemButton:_CreateFrame()
 	button.count:Hide()
 	--]]
 
-	-- any up event is a click
-	button:RegisterForClicks("AnyUp")
+	-- === ADD DEBUG HOOKS ONLY ===
+	button:SetScript("PreClick", function(self, buttonClicked)
+		Logging:Trace("TotemButton(PreClick) : %s button=%s", self:GetName(), "button:", buttonClicked)
+		Logging:Trace("TotemButton(PreClick) : attributes(1) type=%s macrotext=%s", self:GetAttribute("type"), self:GetAttribute("macrotext"))
+		Logging:Trace("TotemButton(PreClick) : attributes(2) type=%s macrotext=%s", self:GetAttribute("type2"), self:GetAttribute("macrotext2"))
+	end)
+
+	--- on left click, cast totem for associated element
+	button:SetAttribute("type", "macro")
+	-- This will be provided later based upon spell id (totem)
+	-- button:SetAttribute("macrotext", "/cast Searing Totem")
+
 	--- on right click, destroy totem for associated element
-	button:SetAttribute("type2", "destroytotem")
-	button:SetAttribute("totem-slot", self.element)
-	-- on left click, cast totem for associated element
-	button:SetAttribute("type", "spell")
+	button:SetAttribute("type2", "macro")
+	--button:SetAttribute("totem-slot", self.element)
+	button:SetAttribute("macrotext2", string.format("/script DestroyTotem(%d)", self.element))
 
 	-- allow button to be moved and swapped with others
-	button:EnableMouse(true)
 	button:SetMovable(true)
 	button:RegisterForDrag("LeftButton")
 	button:SetScript("OnDragStart", function() self:OnDragStart() end)
@@ -450,6 +527,7 @@ function TotemButton:_CreateFrame()
 	button:SetScript("OnAttributeChanged", function(...) self:OnAttributeChanged(...) end)
 	button:Show()
 
+	--self:_CreateTestFrame()
 	return button
 end
 
@@ -481,7 +559,7 @@ function TotemButton:Update()
 	-- if not in combat, we can set the spell attribute which will
 	-- result in the callback doing the needful with icon, cooldown, etc
 	if not inCombat then
-		self._:SetAttribute("spell", spell and spell.id or nil)
+		self:_SetSpellAttributes(spell and spell.id or nil)
 		-- if the totem is present, don't clear the pending spell
 		-- it could be different than current one
 		if not totem:IsPresent() then
@@ -611,9 +689,9 @@ function TotemButton:OnSpellSelected(spell)
 		self.element, tostring(inCombat), tostring(totem), tostring(spell)
 	)
 
-	local currentSpell = Util.Objects.Default(self._:GetAttribute("spell"), -1)
+	local currentSpell = Util.Objects.Default(self._:GetAttribute("spellid"), -1)
 	if currentSpell == spell.id then
-		Logging:Info("OnSpellSelected(%d) : spell has not changed, donig nothing", spell.id)
+		Logging:Info("OnSpellSelected(%d) : spell has not changed, doing nothing", spell.id)
 		return
 	end
 
@@ -629,7 +707,7 @@ function TotemButton:OnSpellSelected(spell)
 			self:SetPending(spell)
 		-- we can activate the selected spell immediately
 		else
-			self._:SetAttribute("spell", spell.id)
+			self:_SetSpellAttributes(spell.id)
 		end
 	end
 end
@@ -639,15 +717,15 @@ end
 --- reserved attributes during combat (i.e. spell, macrotext)
 function TotemButton:OnAttributeChanged(_--[[ frame --]], key, value)
 	Logging:Trace("OnAttributeChanged(%s) : %s = %s", self:GetName(), tostring(key), Util.Objects.ToString(value))
-	if Util.Objects.In(key, "spell", "selectedspell") then
+	if Util.Objects.In(key, "spellid", "selectedspell") then
 		local spell
 		if Util.Objects.IsNumber(value) then
 			spell = Spells():GetById(value)
 		end
 
-		Logging:Debug("OnAttributeChanged(%s) : %s = %s %s (found spell)",  self:GetName(), tostring(key), tostring(value), tostring(Util.Objects.IsSet(spell)))
+		Logging:Debug("OnAttributeChanged(%s) : %s = %s (found spell = %s)",  self:GetName(), tostring(key), tostring(value), tostring(Util.Objects.IsSet(spell)))
 
-		if Util.Strings.Equal(key, "spell") then
+		if Util.Strings.Equal(key, "spellid") then
 			self:OnSpellActivated(spell)
 		elseif Util.Strings.Equal(key, "selectedspell") then
 			-- just update the totem set and rely upon event callbacks to handle based upon state
@@ -1445,55 +1523,9 @@ local UpdateThreshold = 0.01
 function TotemPulseTimer:initialize(parent)
 	self.parent = parent
 	FrameContainer.initialize(self, function() return self:_CreateFrame() end)
-	-- tracks time as clock moves forward
-	self.clock = {
-		current     = 0,
-		delta       = 0,
-		updated     = 0,
-		Set = function(self, current, callback)
-			local actual = GetTime()
-			self.current = current
-			self.delta =  actual - self.current
-			self.updated = actual
-			--Logging:Debug("Set(%.2f) : %.2f / %.2f / %.2f", actual, self.current, self.delta, self.updated)
-			if callback then
-				callback(self.delta)
-			end
-		end,
-		Tick = function(self, callback)
-			self.current = GetTime()
-			self.delta = self.current - self.updated
-			self.updated = self.current
-			if callback then
-				callback(self.delta)
-			end
-		end,
-		Reset = function(self)
-			self.current, self.delta = 0, 0
-			self.updated = GetTime()
-		end,
-	}
-	-- tracks time with respect to associated duration of pulse timer
-	self.time = {
-		duration = 0,
-		remaining = 0,
-		--- @param self table<string, number>
-		--- @param duration number
-		Set = function(self, duration)
-			self.duration = duration
-			self:Reset()
-		end,
-		--- @param self table<string, number>
-		--- @param elapsed number
-		--- @return boolean is there time remaining
-		Elapsed = function(self, elapsed)
-			self.remaining = self.remaining - elapsed
-			return self.remaining > 0
-		end,
-		Reset = function(self)
-			self.remaining = self.duration
-		end
-	}
+	self.interval = 0
+	self.startTime = 0
+	self._running = false
 end
 
 --- @return string
@@ -1501,27 +1533,10 @@ function TotemPulseTimer:GetName()
 	return Util.Strings.Join('_', self.parent:GetFrameName(), 'PulseTimer')
 end
 
-local function Elapsed(self, elapsed)
-	if elapsed > UpdateThreshold then
-		-- if we've gone over the maximum duration, reset it
-		if not self.time:Elapsed(elapsed) then
-			self.time:Reset()
-		end
-
-		self:Update(self.time.remaining)
-	end
-end
-
----  @param self TotemPulseTimer
-local function OnUpdate(self, _, _)
-	self.clock:Tick(function(elapsed) Elapsed(self, elapsed) end)
-	-- Logging:Debug( "OnUpdate(%s) : %.2f / %.2f / %.2f", self:GetName(), self.clock.current, self.clock.delta, self.clock.updated)
-end
 
 -- todo : make secure
 function TotemPulseTimer:_CreateFrame()
 	local frame = CreateFrame('Frame', self:GetName(), self.parent:GetFrame()) --, "SecureHandlerBaseTemplate,SecureHandlerStateTemplate")
-	frame:SetScript("OnUpdate", function(...) OnUpdate(self, ...) end)
 	frame:EnableMouse(false)
 	frame:Hide()
 
@@ -1625,25 +1640,48 @@ end
 
 function TotemPulseTimer:Cancel()
 	self:Hide()
-	self.time:Reset()
-	self.clock:Reset()
+	self._:SetScript("OnUpdate", nil)
+	self._running = false
 end
 
---- @param duration number how often to pulse (in seconds)
---- @param from number the instant, in the past, at which the pulse started (time when totem started)
-function TotemPulseTimer:Start(duration, from)
-	Logging:Debug("Start(%s) : %.2f [%d]", self:GetName(), duration, from)
+--- @param interval number how often to pulse (in seconds)
+--- @param startTime number the instant, in the past, at which the pulse started (time when totem started)
+function TotemPulseTimer:Start(interval, startTime)
+	Logging:Debug("Start(%s) : %.2f [%d]", self:GetName(), interval, startTime)
 
-	self.time:Set(duration)
-	if Util.Objects.IsNumber(from) then
-		-- set the clock 'from' and do an initial update based upon that delta
-		-- future deltas will be handled via events
-		self.clock:Set(from, function(elapsed) Elapsed(self, elapsed) end)
-	else
-		-- reset the clock and assume the total duration is remanining
-		self.clock:Reset()
-		self:Update(duration)
+	if not interval or interval <= 0 then
+		return
 	end
+
+	self.interval = interval
+	self.startTime = startTime or GetTime()
+
+	if self._running then
+		return
+	end
+
+	local accumulator = 0
+	local throttle = 0.05 -- 20 updates/sec
+
+	self._:SetScript("OnUpdate", function(_, elapsed)
+		accumulator = accumulator + elapsed
+		if accumulator < throttle then
+			return
+		end
+		accumulator = 0
+
+		local now = GetTime()
+		-- compute where we are in the pulse cycle
+		local totalElapsed = now - self.startTime
+		local timeIntoPulse = totalElapsed % self.interval
+		local remaining = self.interval - timeIntoPulse
+
+		self.time = self.time or {}
+		self.time.remaining = remaining
+		self.time.duration = self.interval
+
+		self:Update(remaining)
+	end)
 
 	self:Show()
 end
