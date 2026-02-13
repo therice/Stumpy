@@ -2,6 +2,9 @@
 local _, AddOn = ...
 
 AddOn.Changelog = [=[
+2026.0.1 (2026-02-13)
+* correct issues with clicking buttons not working and improve pulse timers 6ac1de1
+
 2026.0.0 (2026-02-12)
 * Increment version to be aligned with year 4458ac1
 
