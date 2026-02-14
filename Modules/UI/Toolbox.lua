@@ -312,11 +312,24 @@ function TotemBar:OnSetUpdated()
 	self.setButton.bar:UpdateButtons()
 end
 
--- TotemBar END --
-
-local function GetKeyBindNamePattern(type)
-	return C.KeyBinds.Prefix .. type
+local function SetSpellAttribute(button, spellId)
+	if not Util.Objects.IsEmpty(button) and not Util.Objects.IsEmpty(spellId) then
+		-- GetSpellInfo = name, iconID, originalIconID, castTime, minRange, maxRange, spellId
+		-- GetSpellInfo(10437) => "Searing Totem", nil, 135825, 0, 0, 0, 10437
+		local spellName = select(1, GetSpellInfo(spellId))
+		Logging:Debug("SetSpellAttribute() : spellId=%s, spellName=%s", tostring(spellId), tostring(spellName))
+		button:SetAttribute("spellname", spellName)
+		button:SetAttribute("spellid", spellId)
+		button:SetAttribute("macrotext", "/cast " .. spellName)
+		--button:SetAttribute("*spell1", spellName)
+		--button:SetAttribute("spell1", spellName)
+		--button:SetAttribute("spell", spellName)
+		--button:SetAttribute("macrotext1", "/cast " .. spellName)
+		--button:SetAttribute("inactive", false)
+	end
 end
+
+-- TotemBar END --
 
 -- TotemButton BEGIN --
 --- @param parent TotemBar
@@ -374,21 +387,7 @@ function TotemButton:GetName()
 end
 
 function TotemButton:_SetSpellAttributes(spellId)
-	if not Util.Objects.IsEmpty(spellId) then
-		local button = self._
-		-- GetSpellInfo = name, iconID, originalIconID, castTime, minRange, maxRange, spellId
-		-- GetSpellInfo(10437) => "Searing Totem", nil, 135825, 0, 0, 0, 10437
-		local spellName = select(1, GetSpellInfo(spellId))
-		Logging:Debug("_SetSpellAttribute() : spellId=%s, spellName=%s", tostring(spellId), tostring(spellName))
-		button:SetAttribute("spellname", spellName)
-		button:SetAttribute("spellid", spellId)
-		button:SetAttribute("macrotext", "/cast " .. spellName)
-		--button:SetAttribute("*spell1", spellName)
-		--button:SetAttribute("spell1", spellName)
-		--button:SetAttribute("spell", spellName)
-		--button:SetAttribute("macrotext1", "/cast " .. spellName)
-		--button:SetAttribute("inactive", false)
-	end
+	SetSpellAttribute(self._, spellId)
 end
 
 function TotemButton:GetSpellId()
@@ -1040,9 +1039,18 @@ function TotemFlyoutBarButton:_CreateFrame()
 	BaseWidget.Border(button, ButtonBorderColor.r, ButtonBorderColor.g, ButtonBorderColor.b, ButtonBorderColor.a, 1, 1, 1)
 
 	-- any up event is a click
-	button:RegisterForClicks("AnyUp")
+	button:RegisterForClicks("AnyDown")
+
+	-- === ADD DEBUG HOOKS ONLY ===
+	button:SetScript("PreClick", function(self, buttonClicked)
+		Logging:Trace("TotemButton(PreClick) : %s button=%s", self:GetName(), "button:", buttonClicked)
+		Logging:Trace("TotemButton(PreClick) : attributes(1) type=%s macrotext=%s",tostring(self:GetAttribute("type")), tostring(self:GetAttribute("macrotext")))
+		--Logging:Trace("TotemButton(PreClick) : attributes(2) type=%s macrotext=%s", self:GetAttribute("type2"), self:GetAttribute("_selectSpell"))
+	end)
+
+
 	-- on left click, cast totem for associated spell
-	button:SetAttribute("type", "spell")
+	button:SetAttribute("type", "macro")
 
 	button:SetScript(
 		'OnShow',
@@ -1099,7 +1107,8 @@ end
 -- to rebuild all the buttons. however, that should also not occur in combat and is a result of (un)learning
 -- a new spell or rang from trainer
 function TotemFlyoutBarButton:Update()
-	self._:SetAttribute("spell", self.spell and self.spell.id or nil)
+	--self._:SetAttribute("spell", self.spell and self.spell.id or nil)
+	SetSpellAttribute(self._, self.spell and self.spell.id or nil)
 	self._.icon:SetTexture(self.spell and self.spell:GetIcon() or nil)
 	if self.spell then
 		self:Show()

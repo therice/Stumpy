@@ -460,7 +460,7 @@ end
 
 --- @return Models.Spell.Spell
 function Spells:GetById(id)
-	Logging:Trace("GetById(%d)", id)
+	--Logging:Trace("GetById(%d)", id)
 	return self.spells.byId[id]
 end
 
