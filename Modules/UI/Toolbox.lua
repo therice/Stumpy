@@ -1413,7 +1413,7 @@ function TotemSetBarButton:_CreateFrame()
 	)
 	button:SetScript('OnLeave', function() UIUtil:HideTooltip() end)
 
-	button:RegisterForClicks("AnyUp")
+	button:RegisterForClicks("AnyDown")
 	-- on left click, select the associated set
 	button:SetAttribute("type", "selectSet")
 	button:SetAttribute("_selectSet", [[
