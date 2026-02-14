@@ -2,6 +2,9 @@
 local _, AddOn = ...
 
 AddOn.Changelog = [=[
+2026.0.2 (2026-02-14)
+* restore ability to cast totem from flyout 9661098
+
 2026.0.1 (2026-02-13)
 * correct issues with clicking buttons not working and improve pulse timers 6ac1de1
 
