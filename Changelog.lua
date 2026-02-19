@@ -2,6 +2,9 @@
 local _, AddOn = ...
 
 AddOn.Changelog = [=[
+2026.0.3 (2026-02-14)
+* restore ability to switch totem set 0a49f64
+
 2026.0.2 (2026-02-14)
 * restore ability to cast totem from flyout 9661098
 
