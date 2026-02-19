@@ -2,6 +2,9 @@
 local _, AddOn = ...
 
 AddOn.Changelog = [=[
+2026.0.4 (2026-02-19)
+* restore ability to right click on totem for selecting 3c830c5
+
 2026.0.3 (2026-02-14)
 * restore ability to switch totem set 0a49f64
 
