@@ -1051,7 +1051,6 @@ function TotemFlyoutBarButton:_CreateFrame()
 
 	-- on left click, cast totem for associated spell
 	button:SetAttribute("type", "macro")
-
 	button:SetScript(
 		'OnShow',
 		function()
@@ -1079,12 +1078,12 @@ function TotemFlyoutBarButton:_CreateFrame()
 	-- if not in combat, it will update the underlying totem set
 	button:SetAttribute("type2", "selectSpell")
 	button:SetAttribute("_selectSpell", [[
-		-- print('_selectSpell(' .. self:GetAttribute('spell') .. ')')
+		-- print('_selectSpell(' .. self:GetAttribute('spellid') .. ')')
 		-- the flyoutBar to which this button is bound
 		local flyoutBar = self:GetParent()
 		-- the totem button to which the flyoutBar is bound
 		local totemButton = flyoutBar:GetParent()
-		totemButton:SetAttribute('selectedspell', self:GetAttribute('spell'))
+		totemButton:SetAttribute('selectedspell', self:GetAttribute('spellid'))
 	]])
 
 	button:WrapScript(button, "PostClick", [[ self:GetParent():Hide() ]])
